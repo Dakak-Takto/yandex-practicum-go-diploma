@@ -1,10 +1,10 @@
 package entity
 
 type User struct {
-	ID       int
-	Login    string
-	Password string
-	Balance  int
+	ID       int    `db:"id"`
+	Login    string `db:"login"`
+	Password string `db:"password"`
+	Balance  int    `db:"balance"`
 }
 
 type UserService interface {
