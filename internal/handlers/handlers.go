@@ -13,16 +13,14 @@ import (
 	"github.com/gorilla/sessions"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
 )
 
 type handler struct {
-	service  service.Service
+	service  entity.Service
 	sessions *sessions.CookieStore
 }
 
-func New(service service.Service, cookieStore *sessions.CookieStore) Handler {
+func New(service entity.Service, cookieStore *sessions.CookieStore) Handler {
 
 	return &handler{
 		service:  service,
@@ -61,7 +59,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.service.GetUserByLogin(registerRequest.Login)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+	if err != nil && !errors.Is(err, entity.ErrNotFound) {
 		log.Println(err)
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
@@ -106,17 +104,17 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.AuthUser(loginRequest.Login, loginRequest.Password)
 	if err != nil {
-		if errors.Is(err, service.ErrInternalError) {
+		if errors.Is(err, entity.ErrInternalError) {
 			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
 			return
 
-		} else if errors.Is(err, service.ErrInvalidRequestFormat) {
+		} else if errors.Is(err, entity.ErrInvalidRequestFormat) {
 			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, render.M{"error": "неверный формат запроса"})
 			return
 
-		} else if errors.Is(err, service.ErrInvalidCredentials) {
+		} else if errors.Is(err, entity.ErrInvalidCredentials) {
 			render.Status(r, http.StatusUnauthorized)
 			render.JSON(w, r, render.M{"error": "неверная пара логин/пароль"})
 			return
@@ -202,7 +200,7 @@ func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request)
 func getUserFromContext(ctx context.Context) (*entity.User, error) {
 	user, ok := ctx.Value(userCtxKey("user")).(*entity.User)
 	if !ok {
-		return nil, service.ErrCtxUserNotFound
+		return nil, entity.ErrCtxUserNotFound
 	}
 	return user, nil
 }

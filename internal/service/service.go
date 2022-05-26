@@ -7,14 +7,17 @@ import (
 	"log"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/pkg/client/accrual"
 )
 
+var _ entity.Service = (*service)(nil)
+
 type service struct {
-	storage storage.Storage
+	storage       entity.Storage
+	accrualClient accrual.Client
 }
 
-func New(storage storage.Storage) Service {
+func New(storage entity.Storage) entity.Service {
 	return &service{
 		storage: storage,
 	}
@@ -24,17 +27,17 @@ func (s *service) RegisterUser(login string, password string) (*entity.User, err
 
 	if login == "" || password == "" {
 		log.Println("пустой логин или пароль")
-		return nil, ErrInvalidRequestFormat // если логин или пароль пустой
+		return nil, entity.ErrInvalidRequestFormat // если логин или пароль пустой
 	}
 
 	user, err := s.storage.GetUserByLogin(login)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+	if err != nil && !errors.Is(err, entity.ErrNotFound) {
 		log.Println("ошибка получения пользователя по логину")
-		return nil, ErrInternalError // ошибка при запросе их хранилища
+		return nil, entity.ErrInternalError // ошибка при запросе их хранилища
 	}
 	if user != nil {
 		log.Println("логин занят")
-		return nil, ErrLoginAlreadyExists // логин занят
+		return nil, entity.ErrLoginAlreadyExists // логин занят
 	}
 
 	user, err = s.storage.SaveUser(&entity.User{
@@ -44,7 +47,7 @@ func (s *service) RegisterUser(login string, password string) (*entity.User, err
 
 	if err != nil {
 		log.Println("ошибка сохранения пользователя", err)
-		return nil, ErrInternalError // ошибка при записи в хранилище
+		return nil, entity.ErrInternalError // ошибка при записи в хранилище
 	}
 
 	return user, nil
@@ -54,16 +57,16 @@ func (s *service) AuthUser(login string, password string) (*entity.User, error) 
 
 	if login == "" || password == "" {
 		log.Println("логин или пароль пустой")
-		return nil, ErrInvalidRequestFormat // если логин или пароль пустой
+		return nil, entity.ErrInvalidRequestFormat // если логин или пароль пустой
 	}
 
 	user, err := s.storage.GetUserByLogin(login)
 	if err != nil {
-		return nil, ErrInternalError // ошибка при запросе из хранилища
+		return nil, entity.ErrInternalError // ошибка при запросе из хранилища
 	}
 
 	if user.Password != hashPassword(password) {
-		return nil, ErrInvalidCredentials // пароль не совпадает или пользователя не существует
+		return nil, entity.ErrInvalidCredentials // пароль не совпадает или пользователя не существует
 	}
 	return user, nil
 }

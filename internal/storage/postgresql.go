@@ -10,11 +10,13 @@ import (
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 )
 
+var _ entity.Storage = (*store)(nil)
+
 type store struct {
 	db *sqlx.DB
 }
 
-func NewPostgresStorage(dsn string) (Storage, error) {
+func NewPostgresStorage(dsn string) (entity.Storage, error) {
 	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		return nil, err
@@ -56,7 +58,7 @@ func (s *store) GetOrderByNumber(number int) (*entity.Order, error) {
 	err := s.db.Get(&order, `SELECT number, status, accrual, user_id, uploaded_at FROM orders WHERE number = $1`, number)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, entity.ErrNotFound
 		}
 		return nil, err
 	}
@@ -68,7 +70,7 @@ func (s *store) GetUserByLogin(login string) (*entity.User, error) {
 	err := s.db.Get(&user, `SELECT id, login, password, balance FROM users WHERE login = $1`, login)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, entity.ErrNotFound
 		}
 		return nil, err
 	}
