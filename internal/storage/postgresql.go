@@ -30,7 +30,10 @@ func NewPostgresStorage(dsn string) (entity.Storage, error) {
 		db: db,
 	}
 
-	//init tables here if need
+	_, err = db.Exec(schema)
+	if err != nil {
+		return nil, err
+	}
 
 	return &store, nil
 }
@@ -92,6 +95,11 @@ func (s *store) GetUserByID(id int) (*entity.User, error) {
 	return &user, err
 }
 
+func (s *store) UpdateOrder(order *entity.Order) error {
+	_, err := s.db.NamedExec(`UPDATE orders SET accrual=:Accrual, status=:Status, user_id=:UserID, uploaded_at=:UploadedAT WHERE number=:Number`, order)
+	return err
+}
+
 const schema string = `
 
 CREATE TABLE IF NOT EXISTS users (
@@ -103,9 +111,15 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS orders (
 	number INT NOT NULL PRIMARY KEY, 
-	status SMALLINT NOT NULL DEFAULT (0),
+	status VARCHAR(20) NOT NULL DEFAULT ('new'),
 	accrual INT NOT NULL DEFAULT (0), 
 	user_id INT NOT NULL REFERENCES users(id),
 	uploaded_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS withdrawals (
+	order_number INT NOT NULL PRIMARY KEY,
+	sum INT NOT NULL DEFAULT(0),
+	processed_at TIMESTAMP DEFAULT NOW()
 );
 `

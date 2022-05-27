@@ -7,6 +7,7 @@ type Service interface {
 	GetUserByID(userID int) (user *User, err error)
 	GetUserOrders(userID int) (orders []*Order, err error)
 	GetUserByLogin(login string) (user *User, err error)
+	UpdateOrder(order *Order) error
 	Withdraw()
 	GetWithdrawals()
 }

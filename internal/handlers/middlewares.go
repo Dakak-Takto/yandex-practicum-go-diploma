@@ -38,3 +38,26 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+func (h *handler) httpLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		recorder := &httpRecorder{
+			ResponseWriter: w,
+			Status:         http.StatusOK,
+		}
+		next.ServeHTTP(recorder, r)
+
+		h.log.Debugf("[%d] %s %s", recorder.Status, r.Method, r.RequestURI)
+	})
+}
+
+type httpRecorder struct {
+	http.ResponseWriter
+	Status int
+}
+
+func (h *httpRecorder) WriteHeader(status int) {
+	h.Status = status
+	h.ResponseWriter.WriteHeader(status)
+}

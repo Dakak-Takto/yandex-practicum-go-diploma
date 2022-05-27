@@ -6,8 +6,8 @@ type UserRegisterDTO struct {
 }
 
 type UserLoginDTO struct {
-	Login    string
-	Password string
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 type WithdrawDTO struct {

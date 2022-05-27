@@ -8,4 +8,5 @@ type Storage interface {
 	SaveUserOrder(orderNumber int, userID int) (*Order, error)
 	SelectOrdersByUserID(userID int) ([]*Order, error)
 	GetOrderByNumber(number int) (*Order, error)
+	UpdateOrder(order *Order) error
 }

@@ -4,8 +4,7 @@ import "net/http"
 
 // GET /api/orders/{number}` — получение информации о расчёте начислений баллов лояльности.
 type Client interface {
-	AddOrders(orders ...int)
-	Run() error
+	GetAccrualInfo(number int) (status string, accrual int, err error)
 }
 
 type client struct {
@@ -18,10 +17,6 @@ func New() Client {
 	}
 }
 
-func (c *client) AddOrders(orders ...int) {
-
-}
-
-func (c *client) Run() error {
-	return nil
+func (s *client) GetAccrualInfo(orderNumber int) (status string, accrual int, err error) {
+	return "", 0, nil
 }
