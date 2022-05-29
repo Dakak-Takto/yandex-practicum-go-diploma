@@ -75,7 +75,7 @@ func (s *store) SaveWithdraw(withdraw *entity.Withdraw) error {
 
 	s.log.Debugf("insert withdraw: %+v", withdraw)
 
-	_, err := s.db.Exec(`INSERT INTO withdrawals (order_number, sum, user_id) VALUES ($1)`, withdraw)
+	_, err := s.db.NamedExec(`INSERT INTO withdrawals (order_number, sum, user_id) VALUES (:order_number, :sum, :user_id)`, withdraw)
 	if err != nil {
 		s.log.Error("save withdraw error: ", err)
 		return err

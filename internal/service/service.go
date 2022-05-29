@@ -107,7 +107,7 @@ func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 		return err
 	}
 
-	s.log.Debug("user balance %f. withdraw %f", user.Balance, sum)
+	s.log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
 	user.Balance = user.Balance - sum
 
 	err = s.storage.SaveWithdraw(&entity.Withdraw{
