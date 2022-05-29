@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/config"
@@ -29,11 +30,15 @@ func (s *service) ProcessNewOrders() error {
 
 		url := fmt.Sprintf("%s/%s/%s", config.AccrualSystemAddress(), "/api/orders/", order.Number)
 
+		s.log.Debugf("get %s", url)
+
 		response, err := http.Get(url)
 		if err != nil {
 			s.log.Errorf("Error get accrual info: %s", err)
 			continue
 		}
+		defer response.Body.Close()
+
 		if response.StatusCode == http.StatusTooManyRequests {
 			sleepTime := 60
 
@@ -46,7 +51,17 @@ func (s *service) ProcessNewOrders() error {
 			time.Sleep(time.Second * time.Duration(sleepTime))
 		}
 
-		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			s.log.Errorf("response status code: %d", response.StatusCode)
+			continue
+		}
+
+		contentType := response.Header.Get("Content-Type")
+		if strings.Contains(contentType, "application/json") {
+			s.log.Errorf("content-type not json:", contentType)
+			continue
+		}
+
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			s.log.Errorf("error read body: %s", err)
