@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -33,17 +32,17 @@ func (h *handler) Register(router chi.Router) {
 	router.Use(h.httpLog)
 
 	router.Route("/api/user/", func(r chi.Router) {
-		r.MethodFunc(http.MethodPost, "/register", h.userRegister)
-		r.MethodFunc(http.MethodPost, "/login", h.userLogin)
+		r.Post("/register", h.userRegister)
+		r.Post("/login", h.userLogin)
 
 		r.Group(func(r chi.Router) {
 			r.Use(h.CheckUserSession)
 
-			r.MethodFunc(http.MethodGet, "/orders", h.userOrders)
-			r.MethodFunc(http.MethodPost, "/orders", h.orderAdd)
-			r.MethodFunc(http.MethodGet, "/balance", h.userBalance)
-			r.MethodFunc(http.MethodPost, "/balance/withdraw", h.userBalanceWithdraw)
-			r.MethodFunc(http.MethodGet, "/balance/withdrawals", h.userBalanceWithdrawals)
+			r.Get("/orders", h.userOrders)
+			r.Post("/orders", h.orderAdd)
+			r.Get("/balance", h.userBalance)
+			r.Post("/balance/withdraw", h.userBalanceWithdraw)
+			r.Get("/balance/withdrawals", h.userBalanceWithdrawals)
 		})
 	})
 }
@@ -56,7 +55,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	// 409 — логин уже занят;
 	// 500 — внутренняя ошибка сервера.
 
-	var registerRequest UserRegisterDTO
+	var registerRequest userRegRequest
 	render.DecodeJSON(r.Body, &registerRequest)
 
 	if registerRequest.Login == "" || registerRequest.Password == "" {
@@ -74,6 +73,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user != nil {
+		h.log.Errorf("login %s already exists", user.Login)
 		render.Status(r, http.StatusConflict)
 		render.JSON(w, r, render.M{"error": "логин уже занят"})
 		return
@@ -89,6 +89,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil {
+		h.log.Error(err)
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
 	}
@@ -96,7 +97,9 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	session.Save(r, w)
 
 	render.Status(r, http.StatusOK)
-	render.JSON(w, r, render.M{"result": "пользователь зарегистрирован и аутентифицирован"})
+	render.JSON(w, r, render.M{
+		"result": "пользователь зарегистрирован и аутентифицирован",
+	})
 }
 
 // POST /api/users/login. Aутентификация пользователя
@@ -107,7 +110,7 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 	// 401 — неверная пара логин/пароль;
 	// 500 — внутренняя ошибка сервера.
 
-	var loginRequest UserLoginDTO
+	var loginRequest userLoginRequest
 	render.DecodeJSON(r.Body, &loginRequest)
 
 	user, err := h.service.AuthUser(loginRequest.Login, loginRequest.Password)
@@ -130,6 +133,7 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil {
+		h.log.Error(err)
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
 	}
@@ -151,14 +155,11 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 	// 422 — неверный формат номера заказа;
 	// 500 — внутренняя ошибка сервера.
 
-	user, err := getUserFromContext(r.Context())
-	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
-		return
-	}
+	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		h.log.Error(err)
 		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
 
@@ -166,6 +167,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 	order, err := h.service.GetOrderByNumber(orderNumber)
 	if err != nil {
+
 		if !errors.Is(err, entity.ErrNotFound) {
 			h.log.Error(err)
 			http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
@@ -183,6 +185,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, render.M{"error": "номер заказа уже был загружен"})
+
 		return
 	}
 
@@ -192,7 +195,9 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 			render.Status(r, http.StatusUnprocessableEntity)
 			render.PlainText(w, r, "неверный номер заказа")
 		}
+		render.Status(r, http.StatusInternalServerError)
 		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -203,11 +208,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 //получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
-	user, err := getUserFromContext(r.Context())
-	if err != nil {
-		http.Error(w, "not auth", http.StatusUnauthorized)
-		return
-	}
+	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	orders, err := h.service.GetUserOrders(user.ID)
 	if err != nil {
@@ -220,11 +221,8 @@ func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
 // получение текущего баланса счёта баллов лояльности пользователя
 func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
-	user, err := getUserFromContext(r.Context())
-	if err != nil {
-		http.Error(w, "not auth", http.StatusUnauthorized)
-		return
-	}
+
+	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	withdrawals, err := h.service.GetWithdrawals(user.ID)
 	if err != nil {
@@ -239,24 +237,20 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 		withdrawn += w.Sum
 	}
 
-	render.JSON(w, r, render.M{
-		"current":   user.Balance,
-		"withdrawn": withdrawn,
+	render.JSON(w, r, balanceResponse{
+		Current:   user.Balance,
+		Withdrawn: withdrawn,
 	})
 }
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
-	user, err := getUserFromContext(r.Context())
-	if err != nil {
-		h.log.Error(err)
-		http.Error(w, "not auth", http.StatusUnauthorized)
-		return
-	}
 
-	var req WithdrawDTO
+	user := r.Context().Value(userCtxKey("user")).(*entity.User)
+
+	var req withdrawRequest
 	render.DecodeJSON(r.Body, &req)
-	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
+	err := h.service.Withdraw(user.ID, req.Order, req.Sum)
 	if err != nil {
 		h.log.Error(err)
 		http.Error(w, "error withdraw", http.StatusInternalServerError)
@@ -266,22 +260,12 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 
 // получение информации о выводе средств с накопительного счёта пользователем
 func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request) {
-	user, err := getUserFromContext(r.Context())
-	if err != nil {
-		http.Error(w, "not auth", http.StatusUnauthorized)
-		return
-	}
+
+	user := r.Context().Value(userCtxKey("user")).(*entity.User)
+
 	withdrawals, err := h.service.GetWithdrawals(user.ID)
 	if err != nil {
 		h.log.Errorf("error get withdrawals: %s", err)
 	}
 	render.JSON(w, r, withdrawals)
-}
-
-func getUserFromContext(ctx context.Context) (*entity.User, error) {
-	user, ok := ctx.Value(userCtxKey("user")).(*entity.User)
-	if !ok {
-		return nil, entity.ErrCtxUserNotFound
-	}
-	return user, nil
 }

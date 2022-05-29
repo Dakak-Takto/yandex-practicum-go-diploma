@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -13,27 +12,28 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 
 		session, err := h.sessions.Get(r, cookieSessionName)
 		if err != nil {
-			fmt.Printf("error get session: %s", err)
+			h.log.Error("error get session: ", err)
 			render.Status(r, http.StatusInternalServerError)
-			render.PlainText(w, r, "")
+			render.PlainText(w, r, "something went wrong")
 			return
 		}
 
 		userID, exist := session.Values[cookieSessionUserIDKey].(int)
 
 		if !exist {
+			h.log.Error("пользоветель не авторизован")
 			render.Status(r, http.StatusUnauthorized)
-			render.PlainText(w, r, "userID not found")
+			render.JSON(w, r, render.M{"error": "пользователь не авторизован"})
 			return
 		}
 
 		user, err := h.service.GetUserByID(userID)
 		if err != nil {
+			h.log.Errorf("пользователь %d не найден", userID)
 			render.Status(r, http.StatusUnauthorized)
-			render.PlainText(w, r, fmt.Sprintf("user with id %d not found", userID))
+			render.JSON(w, r, render.M{"error": "пользователь не авторизован"})
 			return
 		}
-		h.log.Debugf("user: %+v", *user)
 
 		ctx := context.WithValue(r.Context(), userCtxKey("user"), user)
 		next.ServeHTTP(w, r.WithContext(ctx))
