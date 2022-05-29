@@ -57,7 +57,7 @@ func (s *store) SaveUserOrder(orderNumber string, userID int) (*entity.Order, er
 }
 
 func (s *store) SaveWithdraw(withdraw *entity.Withdraw) error {
-	_, err := s.db.Exec(`INSERT INTO withdrawals (order, sum, user_id) VALUES ($1)`, withdraw)
+	_, err := s.db.Exec(`INSERT INTO withdrawals (order_number, sum, user_id) VALUES ($1)`, withdraw)
 	if err != nil {
 		return err
 	}
@@ -104,12 +104,12 @@ func (s *store) GetUserByID(id int) (*entity.User, error) {
 }
 
 func (s *store) UpdateOrder(order *entity.Order) error {
-	_, err := s.db.NamedExec(`UPDATE orders SET accrual=:Accrual, status=:Status, user_id=:UserID, uploaded_at=:UploadedAT WHERE number=:Number`, order)
+	_, err := s.db.NamedExec(`UPDATE orders SET accrual=:accrual, status=:status, user_id=:user_id WHERE number=:number`, order)
 	return err
 }
 
 func (s *store) UpdateUser(user *entity.User) error {
-	_, err := s.db.NamedExec(`UPDATE users SET login=:Login, password=:Password, balance=:Balance WHERE id:=ID`, user)
+	_, err := s.db.NamedExec(`UPDATE users SET login=:login, password=:password, balance=:balance WHERE id:=id`, user)
 	return err
 }
 
@@ -132,7 +132,7 @@ func (s *store) SelectNewOrders() ([]*entity.Order, error) {
 func (s *store) SelectWithdrawals(userID int) ([]*entity.Withdraw, error) {
 	var withdrawals []*entity.Withdraw
 
-	err := s.db.Select(&withdrawals, `SELECT order, sum, user_id, processed_at FROM withdrawals WHERE user_id = $1`, userID)
+	err := s.db.Select(&withdrawals, `SELECT order_number, sum, user_id, processed_at FROM withdrawals WHERE user_id = $1`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +140,7 @@ func (s *store) SelectWithdrawals(userID int) ([]*entity.Withdraw, error) {
 }
 
 const schema string = `
+
 
 CREATE TABLE IF NOT EXISTS users (
 	id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -157,7 +158,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE TABLE IF NOT EXISTS withdrawals (
-	order_number INT NOT NULL PRIMARY KEY,
+	order_number VARCHAR(15) NOT NULL PRIMARY KEY,
 	sum FLOAT NOT NULL DEFAULT(0),
 	user_id INT NOT NULL REFERENCES users(id),
 	processed_at TIMESTAMP DEFAULT NOW()

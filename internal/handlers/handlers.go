@@ -224,6 +224,7 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 
 	withdrawals, err := h.service.GetWithdrawals(user.ID)
 	if err != nil {
+		h.log.Error("error get withdrawals", err)
 		http.Error(w, "error get withdrawals", http.StatusInternalServerError)
 		return
 	}

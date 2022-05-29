@@ -57,7 +57,7 @@ func (s *service) ProcessNewOrders() error {
 		}
 
 		contentType := response.Header.Get("Content-Type")
-		if strings.Contains(contentType, "application/json") {
+		if !strings.Contains(contentType, "application/json") {
 			s.log.Errorf("content-type not json: %s", contentType)
 			continue
 		}
@@ -80,6 +80,22 @@ func (s *service) ProcessNewOrders() error {
 			continue
 		}
 
+		user, err := s.storage.GetUserByID(order.UserID)
+		if err != nil {
+			s.log.Errorf("error get user: %s", err)
+			continue
+		}
+
+		user.Balance = user.Balance + r.Accrual
+
+		s.log.Debugf("New user balance %f", user.Balance)
+
+		err = s.UpdateUser(user)
+		if err != nil {
+			s.log.Errorf("error update user: %s", err)
+			continue
+		}
+
 		order.Accrual = r.Accrual
 		order.Status = r.Status
 
@@ -89,17 +105,8 @@ func (s *service) ProcessNewOrders() error {
 			continue
 		}
 
-		user, err := s.storage.GetUserByID(order.UserID)
-		if err != nil {
-			s.log.Errorf("error get user: %s", err)
-			continue
-		}
-		user.Balance = user.Balance + r.Accrual
-		err = s.UpdateUser(user)
-		if err != nil {
-			s.log.Errorf("error update user: %s", err)
-			continue
-		}
+		s.log.Debug("Order updated")
+
 	}
 	return nil
 }
