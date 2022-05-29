@@ -30,14 +30,14 @@ func (s *service) ProcessNewOrders() error {
 			continue
 		}
 		if response.StatusCode == http.StatusTooManyRequests {
-			var sleepTime int = 60
+			sleepTime := 60
 
 			sleepTime, err := strconv.Atoi(response.Header.Get("Retry-After"))
 			if err != nil {
 				s.log.Errorf("error parse retry-after time: %s", err)
 			}
 
-			s.log.Debug("accrual client sleep: %d second", sleepTime)
+			s.log.Debugf("accrual client sleep: %d second", sleepTime)
 			time.Sleep(time.Second * time.Duration(sleepTime))
 		}
 

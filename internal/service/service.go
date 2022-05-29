@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
@@ -74,8 +75,12 @@ func (s *service) AuthUser(login string, password string) (*entity.User, error) 
 	return user, nil
 }
 
-func (s *service) CreateOrder(number int, userID int) (*entity.Order, error) {
-	if !luhn.Valid(number) {
+func (s *service) CreateOrder(number string, userID int) (*entity.Order, error) {
+	orderInt, err := strconv.Atoi(number)
+	if err != nil {
+		return nil, entity.ErrOrderNumberIncorrect
+	}
+	if !luhn.Valid(orderInt) {
 		return nil, entity.ErrOrderNumberIncorrect
 	}
 	order, err := s.storage.SaveUserOrder(number, userID)
@@ -95,7 +100,7 @@ func (s *service) GetUserOrders(userID int) ([]*entity.Order, error) {
 	return orders, nil
 }
 
-func (s *service) Withdraw(userID int, orderNumber int, sum float64) error {
+func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 	user, err := s.storage.GetUserByID(userID)
 	if err != nil {
 		s.log.Errorf("Error get User: %s", err)
