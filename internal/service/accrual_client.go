@@ -28,7 +28,7 @@ func (s *service) ProcessNewOrders() error {
 
 	for _, order := range orders {
 
-		url := fmt.Sprintf("%s/%s/%s", config.AccrualSystemAddress(), "/api/orders/", order.Number)
+		url := fmt.Sprintf("%s/api/orders/%s", config.AccrualSystemAddress(), order.Number)
 
 		s.log.Debugf("get %s", url)
 
@@ -58,7 +58,7 @@ func (s *service) ProcessNewOrders() error {
 
 		contentType := response.Header.Get("Content-Type")
 		if strings.Contains(contentType, "application/json") {
-			s.log.Errorf("content-type not json:", contentType)
+			s.log.Errorf("content-type not json: %s", contentType)
 			continue
 		}
 
