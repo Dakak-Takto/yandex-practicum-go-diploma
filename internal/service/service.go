@@ -116,11 +116,9 @@ func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 		Order:  orderNumber,
 	})
 
-	if err != nil {
-		s.log.Errorf("error save withdraw: %s", err)
-	}
+	err = s.UpdateUser(user)
 
-	return s.UpdateUser(user)
+	return err
 }
 
 func (s *service) GetWithdrawals(userID int) ([]*entity.Withdraw, error) {

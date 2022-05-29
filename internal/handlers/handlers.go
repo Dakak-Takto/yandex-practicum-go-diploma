@@ -188,6 +188,10 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.service.CreateOrder(orderNumber, user.ID)
 	if err != nil {
+		if errors.Is(err, entity.ErrOrderNumberIncorrect) {
+			render.Status(r, http.StatusUnprocessableEntity)
+			render.PlainText(w, r, "неверный номер заказа")
+		}
 		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
@@ -246,6 +250,7 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 	user, err := getUserFromContext(r.Context())
 	if err != nil {
+		h.log.Error(err)
 		http.Error(w, "not auth", http.StatusUnauthorized)
 		return
 	}
@@ -254,10 +259,10 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 	render.DecodeJSON(r.Body, &req)
 	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
 	if err != nil {
+		h.log.Error(err)
 		http.Error(w, "error withdraw", http.StatusInternalServerError)
 		return
 	}
-
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем

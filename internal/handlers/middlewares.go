@@ -33,6 +33,7 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 			render.PlainText(w, r, fmt.Sprintf("user with id %d not found", userID))
 			return
 		}
+		h.log.Debugf("user: %+v", *user)
 
 		ctx := context.WithValue(r.Context(), userCtxKey("user"), user)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -48,16 +49,23 @@ func (h *handler) httpLog(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(recorder, r)
 
-		h.log.Debugf("[%d] %s %s", recorder.Status, r.Method, r.RequestURI)
+		h.log.Debugf("[%d] %s %s. ", recorder.Status, r.Method, r.RequestURI)
+		h.log.Debugf("response: %s", recorder.response)
 	})
 }
 
 type httpRecorder struct {
 	http.ResponseWriter
-	Status int
+	response []byte
+	Status   int
 }
 
 func (h *httpRecorder) WriteHeader(status int) {
 	h.Status = status
 	h.ResponseWriter.WriteHeader(status)
+}
+
+func (h *httpRecorder) Write(b []byte) (int, error) {
+	h.response = b
+	return h.ResponseWriter.Write(b)
 }
