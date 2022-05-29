@@ -93,8 +93,6 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, render.M{"result": "пользователь зарегистрирован и аутентифицирован"})
-	return
-
 }
 
 // аутентификация пользователя
@@ -131,7 +129,6 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, render.M{"result": "пользователь успешно аутентифицирован"})
-	return
 }
 
 // загрузка пользователем номера заказа для расчёта

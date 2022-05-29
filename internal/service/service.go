@@ -95,10 +95,6 @@ func (s *service) GetUserOrders(userID int) ([]*entity.Order, error) {
 	return orders, nil
 }
 
-func (s *service) GetUserBalance() {
-	return
-}
-
 func (s *service) Withdraw(userID int, orderNumber int, sum float64) error {
 	user, err := s.storage.GetUserByID(userID)
 	if err != nil {

@@ -40,10 +40,11 @@ func main() {
 	log.Info("register handler")
 	handler.Register(router)
 
-	log.Infof("lister and serve http on %s", config.RunAddr())
-	go http.ListenAndServe(config.RunAddr(), router)
+	go service.ProcessNewOrders()
 
-	service.ProcessNewOrders()
+	log.Infof("lister and serve http on %s", config.RunAddr())
+	http.ListenAndServe(config.RunAddr(), router)
+
 }
 
 func initLogger() *logrus.Logger {
