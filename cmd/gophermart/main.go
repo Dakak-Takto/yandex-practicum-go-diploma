@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"path"
 	"runtime"
@@ -18,14 +17,10 @@ import (
 )
 
 func main() {
-
-	cfg := config.GetConfig()
-	log.Printf("config: %+v", cfg)
-
 	log := initLogger()
 
 	log.Info("init storage")
-	storage, err := storage.NewPostgresStorage(cfg.DatabaseURI)
+	storage, err := storage.NewPostgresStorage(config.DatabaseURI())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,8 +40,10 @@ func main() {
 	log.Info("register handler")
 	handler.Register(router)
 
-	log.Infof("lister and serve http on %s", cfg.RunAddress)
-	http.ListenAndServe(cfg.RunAddress, router)
+	log.Infof("lister and serve http on %s", config.RunAddr())
+	go http.ListenAndServe(config.RunAddr(), router)
+
+	service.ProcessNewOrders()
 }
 
 func initLogger() *logrus.Logger {

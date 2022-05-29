@@ -9,4 +9,10 @@ type Storage interface {
 	SelectOrdersByUserID(userID int) ([]*Order, error)
 	GetOrderByNumber(number int) (*Order, error)
 	UpdateOrder(order *Order) error
+	UpdateUser(user *User) error
+
+	SaveWithdraw(*Withdraw) error
+	SelectWithdrawals(userID int) ([]*Withdraw, error)
+
+	SelectNewOrders() ([]*Order, error)
 }

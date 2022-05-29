@@ -20,7 +20,7 @@ type cfg struct {
 
 var config cfg
 
-func GetConfig() cfg {
+func init() {
 	var once sync.Once
 
 	once.Do(func() {
@@ -34,5 +34,16 @@ func GetConfig() cfg {
 		flag.StringVar(&config.AccrualSystemAddress, "r", "", "http://host:port")
 		flag.Parse()
 	})
-	return config
+}
+
+func RunAddr() string {
+	return config.RunAddress
+}
+
+func DatabaseURI() string {
+	return config.DatabaseURI
+}
+
+func AccrualSystemAddress() string {
+	return config.AccrualSystemAddress
 }

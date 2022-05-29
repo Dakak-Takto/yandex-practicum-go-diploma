@@ -1,23 +1,20 @@
 package service
 
 import (
-	"crypto/sha256"
 	"errors"
-	"fmt"
 
 	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/pkg/client/accrual"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
 var _ entity.Service = (*service)(nil)
 
 type service struct {
-	storage       entity.Storage
-	accrualClient accrual.Client
-	log           *logrus.Logger
+	storage entity.Storage
+	log     *logrus.Logger
 }
 
 func New(storage entity.Storage, logger *logrus.Logger) entity.Service {
@@ -46,7 +43,7 @@ func (s *service) RegisterUser(login string, password string) (*entity.User, err
 
 	user, err = s.storage.SaveUser(&entity.User{
 		Login:    login,
-		Password: hashPassword(password),
+		Password: utils.Hash(password),
 	})
 
 	if err != nil {
@@ -70,7 +67,7 @@ func (s *service) AuthUser(login string, password string) (*entity.User, error) 
 		return nil, err // ошибка при запросе из хранилища
 	}
 
-	if user.Password != hashPassword(password) {
+	if user.Password != utils.Hash(password) {
 		s.log.Error("invalid credentials")
 		return nil, entity.ErrInvalidCredentials // пароль не совпадает или пользователя не существует
 	}
@@ -90,35 +87,68 @@ func (s *service) CreateOrder(number int, userID int) (*entity.Order, error) {
 }
 
 func (s *service) GetUserOrders(userID int) ([]*entity.Order, error) {
-	return s.storage.SelectOrdersByUserID(userID)
+	orders, err := s.storage.SelectOrdersByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func (s *service) GetUserBalance() {
 	return
 }
 
-func (s *service) Withdraw() {
-	return
+func (s *service) Withdraw(userID int, orderNumber int, sum float64) error {
+	user, err := s.storage.GetUserByID(userID)
+	if err != nil {
+		s.log.Errorf("Error get User: %s", err)
+		return err
+	}
+	user.Balance = user.Balance - sum
+
+	return s.UpdateUser(user)
 }
 
-func (s *service) GetWithdrawals() {
-	return
+func (s *service) GetWithdrawals(userID int) ([]*entity.Withdraw, error) {
+	withdrawals, err := s.storage.SelectWithdrawals(userID)
+	if err != nil {
+		return nil, err
+	}
+	return withdrawals, nil
 }
 
 func (s *service) GetUserByID(id int) (*entity.User, error) {
-	return s.storage.GetUserByID(id)
+	user, err := s.storage.GetUserByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *service) UpdateUser(user *entity.User) error {
+	err := s.storage.UpdateUser(user)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *service) GetUserByLogin(login string) (*entity.User, error) {
-	return s.storage.GetUserByLogin(login)
+	user, err := s.storage.GetUserByLogin(login)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *service) UpdateOrder(order *entity.Order) error {
-	return s.storage.UpdateOrder(order)
-}
-
-func hashPassword(password string) string {
-	h := sha256.New()
-	h.Write([]byte(password))
-	return fmt.Sprintf("%x", h.Sum(nil))
+	err := s.storage.UpdateOrder(order)
+	if err != nil {
+		return err
+	}
+	return nil
 }

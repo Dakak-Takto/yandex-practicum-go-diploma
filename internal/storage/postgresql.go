@@ -56,6 +56,14 @@ func (s *store) SaveUserOrder(orderNumber int, userID int) (*entity.Order, error
 	return s.GetOrderByNumber(orderNumber)
 }
 
+func (s *store) SaveWithdraw(withdraw *entity.Withdraw) error {
+	_, err := s.db.Exec(`INSERT INTO withdrawals (order, sum, user_id) VALUES ($1)`, withdraw)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *store) GetOrderByNumber(number int) (*entity.Order, error) {
 	var order entity.Order
 	err := s.db.Get(&order, `SELECT number, status, accrual, user_id, uploaded_at FROM orders WHERE number = $1`, number)
@@ -100,26 +108,58 @@ func (s *store) UpdateOrder(order *entity.Order) error {
 	return err
 }
 
+func (s *store) UpdateUser(user *entity.User) error {
+	_, err := s.db.NamedExec(`UPDATE users SET login=:Login, password=:Password, balance=:Balance WHERE id:=ID`, user)
+	return err
+}
+
+func (s *store) SelectNewOrders() ([]*entity.Order, error) {
+	var orders []*entity.Order
+
+	statuses := []entity.OrderStatus{
+		entity.OrderStatusNew,
+		entity.OrderStatusRegistered,
+		entity.OrderStatusProcessing,
+	}
+
+	err := s.db.Select(&orders, `SELECT number, accrual, status, user_id, uploaded_at FROM orders WHERE status = ANY($1)`, statuses)
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
+
+func (s *store) SelectWithdrawals(userID int) ([]*entity.Withdraw, error) {
+	var withdrawals []*entity.Withdraw
+
+	err := s.db.Select(&withdrawals, `SELECT order, sum, user_id, processed_at FROM withdrawals WHERE user_id = $1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	return withdrawals, nil
+}
+
 const schema string = `
 
 CREATE TABLE IF NOT EXISTS users (
 	id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	login VARCHAR(128) NOT NULL, 
 	password VARCHAR(64) NOT NULL,
-	balance INT NOT NULL DEFAULT (0)
+	balance FLOAT NOT NULL DEFAULT (0)
 );
 
 CREATE TABLE IF NOT EXISTS orders (
 	number INT NOT NULL PRIMARY KEY, 
 	status VARCHAR(20) NOT NULL DEFAULT ('new'),
-	accrual INT NOT NULL DEFAULT (0), 
+	accrual FLOAT NOT NULL DEFAULT (0), 
 	user_id INT NOT NULL REFERENCES users(id),
 	uploaded_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS withdrawals (
 	order_number INT NOT NULL PRIMARY KEY,
-	sum INT NOT NULL DEFAULT(0),
+	sum FLOAT NOT NULL DEFAULT(0),
+	user_id INT NOT NULL REFERENCES users(id),
 	processed_at TIMESTAMP DEFAULT NOW()
 );
 `

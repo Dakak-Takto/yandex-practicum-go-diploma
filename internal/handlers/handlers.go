@@ -184,17 +184,61 @@ func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
 // получение текущего баланса счёта баллов лояльности пользователя
 func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromContext(r.Context())
+	if err != nil {
+		http.Error(w, "not auth", http.StatusUnauthorized)
+		return
+	}
 
+	withdrawals, err := h.service.GetWithdrawals(user.ID)
+	if err != nil {
+		http.Error(w, "error get withdrawals", http.StatusInternalServerError)
+		return
+	}
+
+	resp := struct {
+		current   float64
+		withdrawn float64
+	}{}
+
+	for _, w := range withdrawals {
+		resp.withdrawn += w.Sum
+	}
+	resp.current = user.Balance
+
+	render.JSON(w, r, resp)
 }
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromContext(r.Context())
+	if err != nil {
+		http.Error(w, "not auth", http.StatusUnauthorized)
+		return
+	}
+
+	var req WithdrawDTO
+	render.DecodeJSON(r.Body, &req)
+	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
+	if err != nil {
+		http.Error(w, "error withdraw", http.StatusInternalServerError)
+		return
+	}
 
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем
 func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request) {
-
+	user, err := getUserFromContext(r.Context())
+	if err != nil {
+		http.Error(w, "not auth", http.StatusUnauthorized)
+		return
+	}
+	withdrawals, err := h.service.GetWithdrawals(user.ID)
+	if err != nil {
+		h.log.Errorf("error get withdrawals: %s", err)
+	}
+	render.JSON(w, r, withdrawals)
 }
 
 func getUserFromContext(ctx context.Context) (*entity.User, error) {
