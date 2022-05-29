@@ -233,17 +233,16 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := struct {
-		current   float64
-		withdrawn float64
-	}{}
+	var withdrawn float64 = 0
 
 	for _, w := range withdrawals {
-		resp.withdrawn += w.Sum
+		withdrawn += w.Sum
 	}
-	resp.current = user.Balance
 
-	render.JSON(w, r, resp)
+	render.JSON(w, r, render.M{
+		"current":   user.Balance,
+		"withdrawn": withdrawn,
+	})
 }
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
