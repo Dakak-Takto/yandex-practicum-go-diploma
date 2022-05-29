@@ -21,7 +21,7 @@ func main() {
 	log := initLogger()
 
 	log.Info("init storage")
-	storage, err := storage.NewPostgresStorage(config.DatabaseURI())
+	storage, err := storage.NewPostgresStorage(config.DatabaseURI(), log)
 	if err != nil {
 		log.Fatal(err)
 	}
