@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path"
 	"runtime"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
@@ -40,11 +41,16 @@ func main() {
 	log.Info("register handler")
 	handler.Register(router)
 
-	go service.ProcessNewOrders()
-
 	log.Infof("lister and serve http on %s", config.RunAddr())
-	http.ListenAndServe(config.RunAddr(), router)
+	go http.ListenAndServe(config.RunAddr(), router)
 
+	for {
+		time.Sleep(time.Second)
+		err := service.ProcessNewOrders()
+		if err != nil {
+			log.Error(err)
+		}
+	}
 }
 
 func initLogger() *logrus.Logger {

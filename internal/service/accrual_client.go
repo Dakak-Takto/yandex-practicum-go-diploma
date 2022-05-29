@@ -13,13 +13,18 @@ import (
 )
 
 func (s *service) ProcessNewOrders() error {
-
 	orders, err := s.storage.SelectNewOrders()
 	if err != nil {
 		s.log.Errorf("Error get new orders: %s", err)
-		s.log.Errorf("sleep 5 second")
-		time.Sleep(time.Second * 5)
+		return err
 	}
+
+	if len(orders) == 0 {
+		s.log.Debug("no new orders to process")
+	} else {
+		s.log.Debugf("%d new orders. Process...")
+	}
+
 	for _, order := range orders {
 
 		url := fmt.Sprintf("%s/%s/%s", config.AccrualSystemAddress(), "/api/orders/", order.Number)

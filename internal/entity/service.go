@@ -12,5 +12,6 @@ type Service interface {
 	Withdraw(userID int, orderNumber string, sum float64) error
 	GetWithdrawals(userID int) ([]*Withdraw, error)
 
+	GetOrderByNumber(number string) (*Order, error)
 	ProcessNewOrders() error
 }

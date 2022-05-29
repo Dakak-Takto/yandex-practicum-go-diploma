@@ -48,8 +48,13 @@ func (h *handler) Register(router chi.Router) {
 	})
 }
 
-// регистрация пользователя
+// POST /api/user/register. Регистрация пользователя
 func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
+
+	// 200 — пользователь успешно зарегистрирован и аутентифицирован;
+	// 400 — неверный формат запроса;
+	// 409 — логин уже занят;
+	// 500 — внутренняя ошибка сервера.
 
 	var registerRequest UserRegisterDTO
 	render.DecodeJSON(r.Body, &registerRequest)
@@ -94,8 +99,13 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, render.M{"result": "пользователь зарегистрирован и аутентифицирован"})
 }
 
-// аутентификация пользователя
+// POST /api/users/login. Aутентификация пользователя
 func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
+
+	// 200 — пользователь успешно аутентифицирован;
+	// 400 — неверный формат запроса;
+	// 401 — неверная пара логин/пароль;
+	// 500 — внутренняя ошибка сервера.
 
 	var loginRequest UserLoginDTO
 	render.DecodeJSON(r.Body, &loginRequest)
@@ -130,30 +140,60 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, render.M{"result": "пользователь успешно аутентифицирован"})
 }
 
-// загрузка пользователем номера заказа для расчёта
+// POST /api/user/orders. Загрузка пользователем номера заказа для расчёта
 func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
+
+	// 200 — номер заказа уже был загружен этим пользователем;
+	// 202 — новый номер заказа принят в обработку;
+	// 400 — неверный формат запроса;
+	// 401 — пользователь не аутентифицирован;
+	// 409 — номер заказа уже был загружен другим пользователем;
+	// 422 — неверный формат номера заказа;
+	// 500 — внутренняя ошибка сервера.
 
 	user, err := getUserFromContext(r.Context())
 	if err != nil {
-		http.Error(w, "not auth", http.StatusUnauthorized)
+		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
 		return
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "interal server error", http.StatusInternalServerError)
+		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
 
 	orderNumber := string(body)
 
+	order, err := h.service.GetOrderByNumber(orderNumber)
+	if err != nil {
+		if !errors.Is(err, entity.ErrNotFound) {
+			h.log.Error(err)
+			http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if order != nil {
+
+		if order.UserID != user.ID {
+			render.Status(r, http.StatusConflict)
+			render.JSON(w, r, render.M{"error": "номер заказа уже был загружен другим пользователем"})
+			return
+		}
+
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, render.M{"error": "номер заказа уже был загружен"})
+		return
+	}
+
 	_, err = h.service.CreateOrder(orderNumber, user.ID)
 	if err != nil {
-		http.Error(w, "error add order", http.StatusInternalServerError)
+		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 
 	render.Status(r, http.StatusAccepted)
-	render.PlainText(w, r, "order added")
+	render.PlainText(w, r, "новый номер заказа принят в обработку")
 }
 
 //получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях

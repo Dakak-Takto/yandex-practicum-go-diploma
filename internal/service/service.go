@@ -153,3 +153,12 @@ func (s *service) UpdateOrder(order *entity.Order) error {
 	}
 	return nil
 }
+
+func (s *service) GetOrderByNumber(number string) (*entity.Order, error) {
+	order, err := s.storage.GetOrderByNumber(number)
+	if err != nil {
+		return nil, err
+	}
+
+	return order, nil
+}
