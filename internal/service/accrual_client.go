@@ -54,14 +54,14 @@ func (s *service) ProcessNewOrders() error {
 		}
 
 		var r struct {
-			Order   int                `json:"order"`
+			Order   string             `json:"order"`
 			Status  entity.OrderStatus `json:"status"`
 			Accrual float64            `json:"accrual"`
 		}
 
 		err = json.Unmarshal(body, &r)
 		if err != nil {
-			s.log.Errorf("error unmarshal accrual response json: %s", err)
+			s.log.Errorf("error unmarshal accrual response json: %s. Body: %s", err, body)
 			continue
 		}
 
