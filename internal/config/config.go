@@ -29,9 +29,9 @@ func init() {
 			fmt.Printf("%+v\n", err)
 		}
 
-		flag.StringVar(&config.RunAddress, "a", "", "host:port")
-		flag.StringVar(&config.DatabaseURI, "d", "", "database dsn")
-		flag.StringVar(&config.AccrualSystemAddress, "r", "", "http://host:port")
+		flag.StringVar(&config.RunAddress, "a", config.RunAddress, "host:port")
+		flag.StringVar(&config.DatabaseURI, "d", config.DatabaseURI, "database dsn")
+		flag.StringVar(&config.AccrualSystemAddress, "r", config.AccrualSystemAddress, "http://host:port")
 		flag.Parse()
 	})
 }
