@@ -9,4 +9,5 @@ var (
 	ErrInternalError        = errors.New("внутренняя ошибка")
 	ErrNotFound             = errors.New("not found")
 	ErrCtxUserNotFound      = errors.New("пользователь не авторизован")
+	ErrOrderNumberIncorrect = errors.New("неверный номер заказа")
 )

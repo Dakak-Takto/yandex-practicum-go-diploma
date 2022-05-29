@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	"github.com/theplant/luhn"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/pkg/client/accrual"
@@ -77,6 +78,9 @@ func (s *service) AuthUser(login string, password string) (*entity.User, error) 
 }
 
 func (s *service) CreateOrder(number int, userID int) (*entity.Order, error) {
+	if !luhn.Valid(number) {
+		return nil, entity.ErrOrderNumberIncorrect
+	}
 	order, err := s.storage.SaveUserOrder(number, userID)
 	if err != nil {
 		s.log.Errorf("error save order: %s", err)

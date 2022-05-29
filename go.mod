@@ -3,12 +3,14 @@ module github.com/Dakak-Takto/yandex-practicum-go-diploma
 go 1.18
 
 require (
+	github.com/caarlos0/env/v6 v6.9.2
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-chi/render v1.0.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/sirupsen/logrus v1.8.1
+	github.com/theplant/luhn v0.0.0-20170224032821-81a1a381387a
 )
 
 require (
