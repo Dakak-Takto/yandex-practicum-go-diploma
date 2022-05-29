@@ -22,7 +22,7 @@ func (s *service) ProcessNewOrders() error {
 	if len(orders) == 0 {
 		s.log.Debug("no new orders to process")
 	} else {
-		s.log.Debugf("%d new orders. Process...")
+		s.log.Debugf("%d new orders. Process...", len(orders))
 	}
 
 	for _, order := range orders {
