@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -145,11 +144,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "interal server error", http.StatusInternalServerError)
 	}
 
-	orderNumber, err := strconv.Atoi(string(body))
-	if err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
+	orderNumber := string(body)
 
 	_, err = h.service.CreateOrder(orderNumber, user.ID)
 	if err != nil {
@@ -157,7 +152,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Status(r, http.StatusOK)
+	render.Status(r, http.StatusAccepted)
 	render.PlainText(w, r, "order added")
 }
 

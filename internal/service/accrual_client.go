@@ -22,7 +22,7 @@ func (s *service) ProcessNewOrders() error {
 	}
 	for _, order := range orders {
 
-		url := fmt.Sprintf("%s/%s/%d", config.AccrualSystemAddress(), "/api/orders/", order.Number)
+		url := fmt.Sprintf("%s/%s/%s", config.AccrualSystemAddress(), "/api/orders/", order.Number)
 
 		response, err := http.Get(url)
 		if err != nil {

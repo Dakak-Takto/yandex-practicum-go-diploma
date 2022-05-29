@@ -48,7 +48,7 @@ func (s *store) SaveUser(user *entity.User) (*entity.User, error) {
 	return s.GetUserByID(userID)
 }
 
-func (s *store) SaveUserOrder(orderNumber int, userID int) (*entity.Order, error) {
+func (s *store) SaveUserOrder(orderNumber string, userID int) (*entity.Order, error) {
 	_, err := s.db.Exec(`INSERT INTO orders ( number, user_id ) VALUES ($1, $2)`, orderNumber, userID)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (s *store) SaveWithdraw(withdraw *entity.Withdraw) error {
 	return nil
 }
 
-func (s *store) GetOrderByNumber(number int) (*entity.Order, error) {
+func (s *store) GetOrderByNumber(number string) (*entity.Order, error) {
 	var order entity.Order
 	err := s.db.Get(&order, `SELECT number, status, accrual, user_id, uploaded_at FROM orders WHERE number = $1`, number)
 	if err != nil {
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-	number INT NOT NULL PRIMARY KEY, 
+	number VARCHAR(15) NOT NULL PRIMARY KEY, 
 	status VARCHAR(20) NOT NULL DEFAULT ('new'),
 	accrual FLOAT NOT NULL DEFAULT (0), 
 	user_id INT NOT NULL REFERENCES users(id),

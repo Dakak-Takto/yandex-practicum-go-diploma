@@ -1,7 +1,7 @@
 package entity
 
 type Order struct {
-	Number     int         `db:"number"      json:"number"`
+	Number     string      `db:"number"      json:"number"`
 	Accrual    float64     `db:"accrual"     json:"accrual"`
 	Status     OrderStatus `db:"status"      json:"status"`
 	UserID     int         `db:"user_id"     json:"-"`

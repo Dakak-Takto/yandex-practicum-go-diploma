@@ -11,6 +11,6 @@ type UserLoginDTO struct {
 }
 
 type WithdrawDTO struct {
-	Order int
+	Order string
 	Sum   float64
 }
