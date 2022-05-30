@@ -8,19 +8,20 @@ import (
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
 var (
-	_   entity.Service = (*service)(nil)
-	log                = logger.GetLoggerInstance()
+	_   Service = (*service)(nil)
+	log         = logger.GetLoggerInstance()
 )
 
 type service struct {
-	storage entity.Storage
+	storage storage.Storage
 }
 
-func New(storage entity.Storage) entity.Service {
+func New(storage storage.Storage) Service {
 	log.Debug("init service")
 	return &service{
 		storage: storage,
@@ -117,6 +118,9 @@ func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 		Sum:    sum,
 		Order:  orderNumber,
 	})
+	if err != nil {
+		log.Errorf("error save withdraw: %s", err)
+	}
 
 	err = s.UpdateUser(user)
 

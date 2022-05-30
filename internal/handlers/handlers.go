@@ -11,16 +11,17 @@ import (
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
 )
 
 type handler struct {
-	service  entity.Service
+	service  service.Service
 	sessions *sessions.CookieStore
 }
 
 var log = logger.GetLoggerInstance()
 
-func New(service entity.Service, cookieStore *sessions.CookieStore) Handler {
+func New(service service.Service, cookieStore *sessions.CookieStore) Handler {
 
 	return &handler{
 		service:  service,

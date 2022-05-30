@@ -12,15 +12,15 @@ import (
 )
 
 var (
-	_   entity.Storage = (*store)(nil)
-	log                = logger.GetLoggerInstance()
+	_   Storage = (*store)(nil)
+	log         = logger.GetLoggerInstance()
 )
 
 type store struct {
 	db *sqlx.DB
 }
 
-func NewPostgresStorage(dsn string) (entity.Storage, error) {
+func NewPostgresStorage(dsn string) (Storage, error) {
 	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		log.Error(err)

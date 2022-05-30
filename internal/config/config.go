@@ -17,7 +17,7 @@ type cfg struct {
 
 var config cfg
 
-func init() {
+func InitConfig() {
 	var once sync.Once
 
 	once.Do(func() {

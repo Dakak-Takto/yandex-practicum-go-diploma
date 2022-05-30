@@ -18,6 +18,7 @@ import (
 var log = logger.GetLoggerInstance()
 
 func main() {
+	config.InitConfig()
 
 	storage, err := storage.NewPostgresStorage(config.DatabaseURI())
 	if err != nil {
