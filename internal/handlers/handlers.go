@@ -88,6 +88,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
+		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
 	session.Save(r, w)
