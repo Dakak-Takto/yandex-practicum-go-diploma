@@ -116,6 +116,7 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 			render.Status(r, http.StatusUnauthorized)
 			render.JSON(w, r, render.M{"error": "неверная пара логин/пароль"})
 			return
+
 		} else if errors.Is(err, entity.ErrInvalidRequestFormat) {
 			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, render.M{"error": "неверный формат запроса"})
@@ -133,6 +134,7 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
+		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
 	session.Save(r, w)
@@ -192,6 +194,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, entity.ErrOrderNumberIncorrect) {
 			render.Status(r, http.StatusUnprocessableEntity)
 			render.PlainText(w, r, "неверный номер заказа")
+			return
 		}
 		render.Status(r, http.StatusInternalServerError)
 		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
@@ -264,6 +267,7 @@ func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request)
 	withdrawals, err := h.service.GetWithdrawals(user.ID)
 	if err != nil {
 		log.Errorf("error get withdrawals: %s", err)
+		return
 	}
 	render.JSON(w, r, withdrawals)
 }
