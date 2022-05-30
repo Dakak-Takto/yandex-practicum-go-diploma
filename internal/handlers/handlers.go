@@ -158,6 +158,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err)
 		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		return
 	}
 
 	orderNumber := string(body)
