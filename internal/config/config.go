@@ -8,14 +8,11 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-// адрес и порт запуска сервиса: переменная окружения ОС RUN_ADDRESS или флаг -a
-// адрес подключения к базе данных: переменная окружения ОС DATABASE_URI или флаг -d
-// адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r
-
 type cfg struct {
 	RunAddress           string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
 	DatabaseURI          string `env:"DATABASE_URI"`
 	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
+	CookieStoreKey       string `env:"COOKIE_STORE_KEY"`
 }
 
 var config cfg
@@ -32,6 +29,7 @@ func init() {
 		flag.StringVar(&config.RunAddress, "a", config.RunAddress, "host:port")
 		flag.StringVar(&config.DatabaseURI, "d", config.DatabaseURI, "database dsn")
 		flag.StringVar(&config.AccrualSystemAddress, "r", config.AccrualSystemAddress, "http://host:port")
+		flag.StringVar(&config.CookieStoreKey, "k", config.CookieStoreKey, "secret key for session cookie")
 		flag.Parse()
 	})
 }
@@ -46,4 +44,8 @@ func DatabaseURI() string {
 
 func AccrualSystemAddress() string {
 	return config.AccrualSystemAddress
+}
+
+func CookieStoreKey() string {
+	return config.CookieStoreKey
 }

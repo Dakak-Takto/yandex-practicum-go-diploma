@@ -4,41 +4,43 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
-var _ entity.Service = (*service)(nil)
+var (
+	_   entity.Service = (*service)(nil)
+	log                = logger.GetLoggerInstance()
+)
 
 type service struct {
 	storage entity.Storage
-	log     *logrus.Logger
 }
 
-func New(storage entity.Storage, logger *logrus.Logger) entity.Service {
+func New(storage entity.Storage) entity.Service {
+	log.Debug("init service")
 	return &service{
 		storage: storage,
-		log:     logger,
 	}
 }
 
 func (s *service) RegisterUser(login string, password string) (*entity.User, error) {
 
 	if login == "" || password == "" {
-		s.log.Error("пустой логин или пароль")
+		log.Error("пустой логин или пароль")
 		return nil, entity.ErrInvalidRequestFormat // если логин или пароль пустой
 	}
 
 	user, err := s.storage.GetUserByLogin(login)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
-		s.log.Error("ошибка получения пользователя по логину")
+		log.Error("ошибка получения пользователя по логину")
 		return nil, entity.ErrInternalError // ошибка при запросе их хранилища
 	}
 	if user != nil {
-		s.log.Error("логин занят")
+		log.Error("логин занят")
 		return nil, entity.ErrLoginAlreadyExists // логин занят
 	}
 
@@ -48,7 +50,7 @@ func (s *service) RegisterUser(login string, password string) (*entity.User, err
 	})
 
 	if err != nil {
-		s.log.Error("ошибка сохранения пользователя", err)
+		log.Error("ошибка сохранения пользователя", err)
 		return nil, entity.ErrInternalError // ошибка при записи в хранилище
 	}
 
@@ -58,18 +60,18 @@ func (s *service) RegisterUser(login string, password string) (*entity.User, err
 func (s *service) AuthUser(login string, password string) (*entity.User, error) {
 
 	if login == "" || password == "" {
-		s.log.Error("логин или пароль пустой")
+		log.Error("логин или пароль пустой")
 		return nil, entity.ErrInvalidRequestFormat // если логин или пароль пустой
 	}
 
 	user, err := s.storage.GetUserByLogin(login)
 	if err != nil {
-		s.log.Errorf("error get user: %s", err)
+		log.Errorf("error get user: %s", err)
 		return nil, err // ошибка при запросе из хранилища
 	}
 
 	if user.Password != utils.Hash(password) {
-		s.log.Error("invalid credentials")
+		log.Error("invalid credentials")
 		return nil, entity.ErrInvalidCredentials // пароль не совпадает или пользователя не существует
 	}
 	return user, nil
@@ -85,7 +87,7 @@ func (s *service) CreateOrder(number string, userID int) (*entity.Order, error) 
 	}
 	order, err := s.storage.SaveUserOrder(number, userID)
 	if err != nil {
-		s.log.Errorf("error save order: %s", err)
+		log.Errorf("error save order: %s", err)
 		return nil, err
 	}
 	return order, nil
@@ -103,11 +105,11 @@ func (s *service) GetUserOrders(userID int) ([]*entity.Order, error) {
 func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 	user, err := s.storage.GetUserByID(userID)
 	if err != nil {
-		s.log.Errorf("Error get User: %s", err)
+		log.Errorf("Error get User: %s", err)
 		return err
 	}
 
-	s.log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
+	log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
 	user.Balance = user.Balance - sum
 
 	err = s.storage.SaveWithdraw(&entity.Withdraw{
