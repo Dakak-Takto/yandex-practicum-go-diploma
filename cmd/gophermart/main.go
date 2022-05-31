@@ -20,24 +20,26 @@ var log = logger.GetLoggerInstance()
 func main() {
 	config.InitConfig()
 
-	storage, err := storage.NewPostgresStorage(config.DatabaseURI())
+	store, err := storage.NewPostgresStorage(config.DatabaseURI())
 	if err != nil {
 		log.Fatal(err)
 	}
-	service := service.New(storage)
+	useCase := service.New(store)
 
 	cookieStore := initCookieStore(config.CookieStoreKey())
 
-	handler := handlers.New(service, cookieStore)
+	handler := handlers.New(useCase, cookieStore)
 	router := chi.NewRouter()
 	handler.Register(router)
 
 	log.Infof("lister %s", config.RunAddr())
-	go http.ListenAndServe(config.RunAddr(), router)
+	go log.Fatal(
+		http.ListenAndServe(config.RunAddr(), router),
+	)
 
 	for {
 		time.Sleep(time.Second)
-		err := service.ProcessNewOrders()
+		err := useCase.ProcessNewOrders()
 		if err != nil {
 			log.Error(err)
 		}

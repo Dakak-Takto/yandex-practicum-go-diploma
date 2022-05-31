@@ -7,12 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/sessions"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/mocks"
 )
 
 func Test_handlers_userRegister(t *testing.T) {

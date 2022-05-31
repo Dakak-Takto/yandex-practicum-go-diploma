@@ -52,7 +52,12 @@ func (h *handler) Register(router chi.Router) {
 func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	var registerRequest userRegRequest
-	render.DecodeJSON(r.Body, &registerRequest)
+	err := render.DecodeJSON(r.Body, &registerRequest)
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, render.M{"error": "something went wrong"})
+		return
+	}
 
 	if registerRequest.Login == "" || registerRequest.Password == "" {
 		render.Status(r, http.StatusBadRequest)
@@ -91,7 +96,13 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
-	session.Save(r, w)
+	err = session.Save(r, w)
+	if err != nil {
+		log.Errorf("error save session: %s", err)
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, render.M{"error": "something went wrong"})
+		return
+	}
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, render.M{
@@ -99,7 +110,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// POST /api/users/login. Aутентификация пользователя
+// POST /api/users/login. Аутентификация пользователя
 func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	// 200 — пользователь успешно аутентифицирован;
@@ -108,7 +119,12 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 	// 500 — внутренняя ошибка сервера.
 
 	var loginRequest userLoginRequest
-	render.DecodeJSON(r.Body, &loginRequest)
+	err := render.DecodeJSON(r.Body, &loginRequest)
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, render.M{"error": "something went wrong"})
+		return
+	}
 
 	user, err := h.service.AuthUser(loginRequest.Login, loginRequest.Password)
 	if err != nil {
@@ -137,8 +153,13 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
-	session.Save(r, w)
-
+	err = session.Save(r, w)
+	if err != nil {
+		log.Errorf("error save session: %s", err)
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, render.M{"error": "something went wrong"})
+		return
+	}
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, render.M{"result": "пользователь успешно аутентифицирован"})
 }
@@ -206,7 +227,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 	render.PlainText(w, r, "новый номер заказа принят в обработку")
 }
 
-//получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
+// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
@@ -250,8 +271,14 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	var req withdrawRequest
-	render.DecodeJSON(r.Body, &req)
-	err := h.service.Withdraw(user.ID, req.Order, req.Sum)
+	err := render.DecodeJSON(r.Body, &req)
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, render.M{"error": "something went wrong"})
+		return
+	}
+
+	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
 	if err != nil {
 		log.Error(err)
 		http.Error(w, "error withdraw", http.StatusInternalServerError)
