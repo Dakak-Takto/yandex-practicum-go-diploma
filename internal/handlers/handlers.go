@@ -164,40 +164,24 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 	orderNumber := string(body)
 
-	order, err := h.service.GetOrderByNumber(orderNumber)
-	if err != nil {
+	if _, err = h.service.CreateOrder(orderNumber, user.ID); err != nil {
 
-		if !errors.Is(err, entity.ErrNotFound) {
-			log.Error(err)
-			JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
-			return
-		}
-	}
-
-	if order != nil {
-
-		if order.UserID != user.ID {
+		if errors.Is(err, entity.ErrOrderNumberConflict) {
 			JSONmsg(w, http.StatusConflict, "error", "номер заказа уже был загружен другим пользователем")
 			return
 		}
 
-		JSONmsg(w, http.StatusOK, "result", "номер заказа уже был загружен")
-
-		return
-	}
-
-	_, err = h.service.CreateOrder(orderNumber, user.ID)
-	if err != nil {
 		if errors.Is(err, entity.ErrOrderNumberIncorrect) {
 			JSONmsg(w, http.StatusUnprocessableEntity, "error", "неверный номер заказа")
 			r.Context()
 			return
 		}
-		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 
-		return
+		if errors.Is(err, entity.ErrOrderNumberAlreadyExist) {
+			JSONmsg(w, http.StatusOK, "result", "номер заказа уже был загружен")
+			return
+		}
 	}
-
 	JSONmsg(w, http.StatusAccepted, "result", "новый номер заказа принят в обработку")
 }
 

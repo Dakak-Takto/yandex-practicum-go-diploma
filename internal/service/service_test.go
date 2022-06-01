@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	_ "github.com/golang/mock/mockgen/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
@@ -22,6 +23,19 @@ func Test_service_RegisterUser(t *testing.T) {
 
 	_, err := New(m).RegisterUser("login", "password")
 	require.NoError(t, err)
+}
+
+func Test_service_RegisterUser_LoginExist(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockStorage(ctrl)
+	m.EXPECT().GetUserByLogin("login").Return(&entity.User{}, nil)
+
+	_, err := New(m).RegisterUser("login", "password1")
+	if assert.Error(t, err) {
+		require.Equal(t, err, entity.ErrLoginAlreadyExists)
+	}
 }
 
 func Test_service_AuthUser(t *testing.T) {
@@ -45,6 +59,29 @@ func Test_service_AuthUser(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_service_AuthUser_WrongPassword(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		login    string = "login"
+		password string = "password"
+	)
+
+	u := entity.User{
+		Login:    login,
+		Password: utils.Hash(password),
+	}
+
+	m := mocks.NewMockStorage(ctrl)
+	m.EXPECT().GetUserByLogin(login).Return(&u, nil)
+
+	_, err := New(m).AuthUser(login, "wrong password")
+	if assert.Error(t, err) {
+		require.Equal(t, err, entity.ErrInvalidCredentials)
+	}
+}
+
 func Test_service_CreateOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -60,6 +97,23 @@ func Test_service_CreateOrder(t *testing.T) {
 
 	_, err := New(m).CreateOrder(testOrder.Number, testOrder.UserID)
 	require.NoError(t, err)
+}
+
+func Test_service_CreateOrder_WrongNumber(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockStorage(ctrl)
+
+	testOrder := entity.Order{
+		Number: "wrong number",
+		UserID: 24,
+	}
+
+	_, err := New(m).CreateOrder(testOrder.Number, testOrder.UserID)
+	if assert.Error(t, err) {
+		require.Equal(t, err, entity.ErrOrderNumberIncorrect)
+	}
 }
 
 func Test_service_GetUserOrders(t *testing.T) {

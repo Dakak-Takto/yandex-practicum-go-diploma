@@ -86,7 +86,21 @@ func (s *service) CreateOrder(number string, userID int) (*entity.Order, error) 
 	if !luhn.Valid(orderInt) {
 		return nil, entity.ErrOrderNumberIncorrect
 	}
-	order, err := s.storage.SaveUserOrder(number, userID)
+
+	order, err := s.GetOrderByNumber(number)
+	if err != nil && !errors.Is(err, entity.ErrNotFound) {
+		log.Error(err)
+		return nil, entity.ErrInternalError
+	}
+
+	if !order.IsEmpty() {
+		if order.UserID != userID {
+			return nil, entity.ErrOrderNumberConflict
+		}
+		return nil, entity.ErrOrderNumberAlreadyExist
+	}
+
+	order, err = s.storage.SaveUserOrder(number, userID)
 	if err != nil {
 		log.Errorf("error save order: %s", err)
 		return nil, err
