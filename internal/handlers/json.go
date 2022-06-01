@@ -6,11 +6,11 @@ import (
 	"net/http"
 )
 
-func JSON(w http.ResponseWriter, status int, i any) {
+func JSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(status)
 	w.Header().Set("Content-type", "application/json")
-	json.NewEncoder(w).Encode(i)
+	json.NewEncoder(w).Encode(v)
 }
 
 func JSONmsg(w http.ResponseWriter, status int, key, value string) {
@@ -21,6 +21,6 @@ func JSONmsg(w http.ResponseWriter, status int, key, value string) {
 	})
 }
 
-func decodeJSON(r io.Reader, v any) error {
+func decodeJSON(r io.Reader, v interface{}) error {
 	return json.NewDecoder(r).Decode(v)
 }
