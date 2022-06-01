@@ -33,9 +33,9 @@ func main() {
 	handler.Register(router)
 
 	log.Infof("lister %s", config.RunAddr())
-	go log.Fatal(
-		http.ListenAndServe(config.RunAddr(), router),
-	)
+	go func() {
+		log.Fatal(http.ListenAndServe(config.RunAddr(), router))
+	}()
 
 	for {
 		time.Sleep(time.Second)
