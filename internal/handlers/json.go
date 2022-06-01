@@ -6,17 +6,16 @@ import (
 	"net/http"
 )
 
+// write json with Content-type header
 func JSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(status)
-	w.Header().Set("Content-type", "application/json")
 	json.NewEncoder(w).Encode(v)
 }
 
+// write json message ({key:value}) with content-type header
 func JSONmsg(w http.ResponseWriter, status int, key, value string) {
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{
+	JSON(w, status, map[string]string{
 		key: value,
 	})
 }
