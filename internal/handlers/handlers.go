@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"github.com/gorilla/sessions"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
@@ -52,116 +51,95 @@ func (h *handler) Register(router chi.Router) {
 func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	var registerRequest userRegRequest
-	err := render.DecodeJSON(r.Body, &registerRequest)
-	if err != nil {
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "something went wrong"})
+	if err := decodeJSON(r.Body, &registerRequest); err != nil {
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	if registerRequest.Login == "" || registerRequest.Password == "" {
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, render.M{"error": "неверный формат запроса"})
+		JSONmsg(w, http.StatusBadRequest, "error", "неверный формат запроса")
 		return
 	}
 
 	user, err := h.service.GetUserByLogin(registerRequest.Login)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
 		log.Error(err)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	if user != nil {
 		log.Errorf("login %s already exists", user.Login)
-		render.Status(r, http.StatusConflict)
-		render.JSON(w, r, render.M{"error": "логин уже занят"})
+		JSONmsg(w, http.StatusConflict, "error", "логин уже занят")
 		return
 	}
 
 	user, err = h.service.RegisterUser(registerRequest.Login, registerRequest.Password)
 	if err != nil {
 		log.Error(err)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil {
 		log.Error(err)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
-		return
-	}
-	session.Values[cookieSessionUserIDKey] = user.ID
-	err = session.Save(r, w)
-	if err != nil {
-		log.Errorf("error save session: %s", err)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "something went wrong"})
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, render.M{
-		"result": "пользователь зарегистрирован и аутентифицирован",
-	})
+	session.Values[cookieSessionUserIDKey] = user.ID
+
+	if err = session.Save(r, w); err != nil {
+		log.Errorf("error save session: %s", err)
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
+		return
+	}
+
+	JSONmsg(w, http.StatusOK, "result", "пользователь зарегистрирован и аутентифицирован")
 }
 
 // POST /api/users/login. Аутентификация пользователя
 func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
-	// 200 — пользователь успешно аутентифицирован;
-	// 400 — неверный формат запроса;
-	// 401 — неверная пара логин/пароль;
-	// 500 — внутренняя ошибка сервера.
-
 	var loginRequest userLoginRequest
-	err := render.DecodeJSON(r.Body, &loginRequest)
-	if err != nil {
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "something went wrong"})
+	if err := decodeJSON(r.Body, &loginRequest); err != nil {
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	user, err := h.service.AuthUser(loginRequest.Login, loginRequest.Password)
 	if err != nil {
+
 		if errors.Is(err, entity.ErrNotFound) {
-			render.Status(r, http.StatusUnauthorized)
-			render.JSON(w, r, render.M{"error": "неверная пара логин/пароль"})
+			JSONmsg(w, http.StatusUnauthorized, "error", "неверная пара логин/пароль")
 			return
 
 		} else if errors.Is(err, entity.ErrInvalidRequestFormat) {
-			render.Status(r, http.StatusBadRequest)
-			render.JSON(w, r, render.M{"error": "неверный формат запроса"})
+			JSONmsg(w, http.StatusBadRequest, "error", "неверный формат запроса")
 			return
 
 		}
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
-		return
 
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
+		return
 	}
 
 	session, err := h.sessions.Get(r, cookieSessionName)
-	if err != nil {
+	if err != nil && !session.IsNew {
 		log.Error(err)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "внутренняя ошибка сервера"})
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
-	err = session.Save(r, w)
-	if err != nil {
+
+	if err = session.Save(r, w); err != nil {
 		log.Errorf("error save session: %s", err)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "something went wrong"})
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, render.M{"result": "пользователь успешно аутентифицирован"})
+
+	JSONmsg(w, http.StatusOK, "result", "пользователь успешно аутентифицирован")
 }
 
 // POST /api/user/orders. Загрузка пользователем номера заказа для расчёта
@@ -180,7 +158,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Error(err)
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
@@ -191,7 +169,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 		if !errors.Is(err, entity.ErrNotFound) {
 			log.Error(err)
-			http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+			JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 			return
 		}
 	}
@@ -199,13 +177,11 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 	if order != nil {
 
 		if order.UserID != user.ID {
-			render.Status(r, http.StatusConflict)
-			render.JSON(w, r, render.M{"error": "номер заказа уже был загружен другим пользователем"})
+			JSONmsg(w, http.StatusConflict, "error", "номер заказа уже был загружен другим пользователем")
 			return
 		}
 
-		render.Status(r, http.StatusOK)
-		render.JSON(w, r, render.M{"error": "номер заказа уже был загружен"})
+		JSONmsg(w, http.StatusOK, "result", "номер заказа уже был загружен")
 
 		return
 	}
@@ -213,18 +189,16 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 	_, err = h.service.CreateOrder(orderNumber, user.ID)
 	if err != nil {
 		if errors.Is(err, entity.ErrOrderNumberIncorrect) {
-			render.Status(r, http.StatusUnprocessableEntity)
-			render.PlainText(w, r, "неверный номер заказа")
+			JSONmsg(w, http.StatusUnprocessableEntity, "error", "неверный номер заказа")
+			r.Context()
 			return
 		}
-		render.Status(r, http.StatusInternalServerError)
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 
 		return
 	}
 
-	render.Status(r, http.StatusAccepted)
-	render.PlainText(w, r, "новый номер заказа принят в обработку")
+	JSONmsg(w, http.StatusAccepted, "result", "новый номер заказа принят в обработку")
 }
 
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
@@ -235,10 +209,10 @@ func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.service.GetUserOrders(user.ID)
 	if err != nil {
 		log.Error(err)
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
-	render.JSON(w, r, orders)
+	JSON(w, http.StatusOK, orders)
 }
 
 // получение текущего баланса счёта баллов лояльности пользователя
@@ -249,7 +223,7 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 	withdrawals, err := h.service.GetWithdrawals(user.ID)
 	if err != nil {
 		log.Error("error get withdrawals", err)
-		http.Error(w, "error get withdrawals", http.StatusInternalServerError)
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
@@ -259,7 +233,7 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 		withdrawn += w.Sum
 	}
 
-	render.JSON(w, r, balanceResponse{
+	JSON(w, http.StatusOK, balanceResponse{
 		Current:   user.Balance,
 		Withdrawn: withdrawn,
 	})
@@ -271,17 +245,16 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	var req withdrawRequest
-	err := render.DecodeJSON(r.Body, &req)
+	err := decodeJSON(r.Body, &req)
 	if err != nil {
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, render.M{"error": "something went wrong"})
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
 	if err != nil {
 		log.Error(err)
-		http.Error(w, "error withdraw", http.StatusInternalServerError)
+		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 }
@@ -296,5 +269,6 @@ func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request)
 		log.Errorf("error get withdrawals: %s", err)
 		return
 	}
-	render.JSON(w, r, withdrawals)
+
+	JSON(w, http.StatusOK, withdrawals)
 }
