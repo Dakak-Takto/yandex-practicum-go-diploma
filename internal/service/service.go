@@ -93,7 +93,7 @@ func (s *service) CreateOrder(number string, userID int) (*entity.Order, error) 
 		return nil, entity.ErrInternalError
 	}
 
-	if !order.IsEmpty() {
+	if order != nil {
 		if order.UserID != userID {
 			return nil, entity.ErrOrderNumberConflict
 		}

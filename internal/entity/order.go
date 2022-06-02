@@ -13,10 +13,6 @@ type Order struct {
 	UploadedAt orderTime   `db:"uploaded_at" json:"uploaded_at"`
 }
 
-func (o *Order) IsEmpty() bool {
-	return *o == Order{}
-}
-
 type OrderStatus string
 
 const (
