@@ -169,7 +169,7 @@ func (s *store) SelectNewOrders() ([]*entity.Order, error) {
 
 	var orders []*entity.Order
 
-	statuses := []entity.OrderStatus{
+	statuses := []string{
 		entity.OrderStatusNew,
 		entity.OrderStatusRegistered,
 		entity.OrderStatusProcessing,

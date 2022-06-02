@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/config"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 )
 
 func (s *service) ProcessNewOrders() error {
@@ -73,9 +72,9 @@ func (s *service) ProcessNewOrders() error {
 			}
 
 			var r struct {
-				Order   string             `json:"order"`
-				Status  entity.OrderStatus `json:"status"`
-				Accrual float64            `json:"accrual"`
+				Order   string  `json:"order"`
+				Status  string  `json:"status"`
+				Accrual float64 `json:"accrual"`
 			}
 
 			err = json.Unmarshal(body, &r)
