@@ -200,3 +200,11 @@ func (s *service) GetOrderByNumber(number string) (*entity.Order, error) {
 
 	return order, nil
 }
+
+func (s *service) GetNewOrders() ([]*entity.Order, error) {
+	orders, err := s.storage.SelectNewOrders()
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}

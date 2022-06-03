@@ -1,16 +1,17 @@
 package main
 
 import (
+	"context"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
 
+	_accrual "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/client/accrual"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/config"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/handlers"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
+	_service "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
@@ -24,26 +25,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	useCase := service.New(store)
+	service := _service.New(store)
 
 	cookieStore := initCookieStore(config.CookieStoreKey())
 
-	handler := handlers.New(useCase, cookieStore)
+	handler := handlers.New(service, cookieStore)
 	router := chi.NewRouter()
 	handler.Register(router)
 
-	log.Infof("lister %s", config.RunAddr())
-	go func() {
-		log.Fatal(http.ListenAndServe(config.RunAddr(), router))
-	}()
+	accrual := _accrual.New(service, config.AccrualSystemAddress())
 
-	for {
-		time.Sleep(time.Second)
-		err := useCase.ProcessNewOrders()
-		if err != nil {
-			log.Error(err)
-		}
-	}
+	go accrual.Run(context.Background())
+
+	log.Fatal(http.ListenAndServe(config.RunAddr(), router))
+
 }
 
 func initCookieStore(key string) *sessions.CookieStore {
