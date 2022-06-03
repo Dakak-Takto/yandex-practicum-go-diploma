@@ -196,6 +196,20 @@ func (mr *MockServiceMockRecorder) UpdateUser(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockService)(nil).UpdateUser), arg0)
 }
 
+// UserBalanceChange mocks base method.
+func (m *MockService) UserBalanceChange(arg0 int, arg1 float64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UserBalanceChange", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UserBalanceChange indicates an expected call of UserBalanceChange.
+func (mr *MockServiceMockRecorder) UserBalanceChange(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserBalanceChange", reflect.TypeOf((*MockService)(nil).UserBalanceChange), arg0, arg1)
+}
+
 // Withdraw mocks base method.
 func (m *MockService) Withdraw(arg0 int, arg1 string, arg2 float64) error {
 	m.ctrl.T.Helper()

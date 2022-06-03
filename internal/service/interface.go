@@ -16,5 +16,7 @@ type Service interface {
 
 	Withdraw(userID int, orderNumber string, sum float64) error
 	GetWithdrawals(userID int) ([]*entity.Withdraw, error)
+	UserBalanceChange(userID int, delta float64) error
+
 	ProcessNewOrders() error
 }

@@ -145,9 +145,23 @@ func (s *store) GetUserByID(id int) (*entity.User, error) {
 
 func (s *store) UpdateOrder(order *entity.Order) error {
 
-	_, err := s.db.NamedExec(`UPDATE orders SET accrual=:accrual, status=:status, user_id=:user_id WHERE number=:number`, order)
+	tx, err := s.db.Beginx()
 	if err != nil {
-		log.Error("update order error: ", err)
+		return err
+	}
+	defer tx.Rollback()
+
+	updateOrder, err := s.db.PrepareNamed(`UPDATE orders SET accrual=:accrual, status=:status, user_id=:user_id WHERE number=:number`)
+	if err != nil {
+		log.Error("Prepare error:", err)
+		return err
+	}
+
+	if _, err := tx.NamedStmt(updateOrder).Exec(order); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 
@@ -156,9 +170,47 @@ func (s *store) UpdateOrder(order *entity.Order) error {
 
 func (s *store) UpdateUser(user *entity.User) error {
 
-	_, err := s.db.NamedExec(`UPDATE users SET login=:login, password=:password, balance=:balance WHERE id=:id`, user)
+	tx, err := s.db.Beginx()
 	if err != nil {
-		log.Error("update user error: ", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	updateUser, err := s.db.PrepareNamed(`UPDATE users SET login=:login, password=:password, balance=:balance WHERE id=:id`)
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.NamedStmt(updateUser).Exec(user); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *store) UserBalanceChange(userID int, delta float64) error {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	updateUserBalance, err := s.db.Prepare(`UPDATE users SET balance = balance + $1 WHERE id = $2`)
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Stmt(updateUserBalance).Exec(delta, userID); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 

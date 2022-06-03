@@ -15,6 +15,7 @@ type Storage interface {
 
 	SaveWithdraw(*entity.Withdraw) error
 	SelectWithdrawals(userID int) ([]*entity.Withdraw, error)
+	UserBalanceChange(userID int, delta float64) error
 
 	SelectNewOrders() ([]*entity.Order, error)
 }

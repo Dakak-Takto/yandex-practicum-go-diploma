@@ -83,21 +83,11 @@ func (s *service) ProcessNewOrders() error {
 				return
 			}
 
-			user, err := s.storage.GetUserByID(order.UserID)
-			if err != nil {
-				log.Errorf("error get user: %s", err)
-				return
+			if err := s.UserBalanceChange(order.UserID, +r.Accrual); err != nil {
+				log.Errorf("error update user balance: userID: %d, delta %f", order.UserID, r.Accrual)
 			}
 
-			user.Balance = user.Balance + r.Accrual
-
-			log.Debugf("New user balance %f", user.Balance)
-
-			err = s.UpdateUser(user)
-			if err != nil {
-				log.Errorf("error update user: %s", err)
-				return
-			}
+			log.Debugf("Change user balance: userID %d, delta %f", order.UserID, r.Accrual)
 
 			order.Accrual = r.Accrual
 			order.Status = r.Status

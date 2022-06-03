@@ -108,6 +108,15 @@ func (s *service) CreateOrder(number string, userID int) (*entity.Order, error) 
 	return order, nil
 }
 
+func (s *service) UserBalanceChange(userID int, delta float64) error {
+
+	if err := s.storage.UserBalanceChange(userID, delta); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *service) GetUserOrders(userID int) ([]*entity.Order, error) {
 	orders, err := s.storage.SelectOrdersByUserID(userID)
 	if err != nil {
@@ -125,7 +134,6 @@ func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 	}
 
 	log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
-	user.Balance = user.Balance - sum
 
 	err = s.storage.SaveWithdraw(&entity.Withdraw{
 		UserID: user.ID,
@@ -136,7 +144,7 @@ func (s *service) Withdraw(userID int, orderNumber string, sum float64) error {
 		log.Errorf("error save withdraw: %s", err)
 	}
 
-	err = s.UpdateUser(user)
+	err = s.UserBalanceChange(user.ID, -sum)
 
 	return err
 }
