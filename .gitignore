@@ -23,6 +23,6 @@ vendor/
 .vscode
 
 # Dcocker
-./Dockerfile
-./docker-compose.yml
+Dockerfile
+docker-compose.yml
 
