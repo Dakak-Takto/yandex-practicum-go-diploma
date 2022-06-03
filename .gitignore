@@ -21,3 +21,8 @@ vendor/
 # IDEs directories
 .idea
 .vscode
+
+# Dcocker
+Dockerfile
+docker-compose.yml
+
