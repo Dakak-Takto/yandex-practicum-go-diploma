@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +21,8 @@ func Test_handlers_userRegister(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	m := mocks.NewMockService(ctrl)
 
 	testUser := entity.User{
@@ -29,8 +32,8 @@ func Test_handlers_userRegister(t *testing.T) {
 		Balance:  2022,
 	}
 
-	m.EXPECT().GetUserByLogin(gomock.Any(), testUser.Login).Return(nil, nil)
-	m.EXPECT().RegisterUser(gomock.Any(), testUser.Login, testUser.Password).Return(&testUser, nil)
+	m.EXPECT().GetUserByLogin(ctx, testUser.Login).Return(nil, nil)
+	m.EXPECT().RegisterUser(ctx, testUser.Login, testUser.Password).Return(&testUser, nil)
 
 	h := handler{
 		service:  m,
@@ -54,6 +57,8 @@ func Test_handlers_userLogin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	m := mocks.NewMockService(ctrl)
 
 	testUser := entity.User{
@@ -63,7 +68,7 @@ func Test_handlers_userLogin(t *testing.T) {
 		Balance:  2022,
 	}
 
-	m.EXPECT().AuthUser(gomock.Any(), testUser.Login, testUser.Password).Return(&testUser, nil)
+	m.EXPECT().AuthUser(ctx, testUser.Login, testUser.Password).Return(&testUser, nil)
 
 	h := handler{
 		service:  m,
