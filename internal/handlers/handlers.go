@@ -61,7 +61,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.GetUserByLogin(registerRequest.Login)
+	user, err := h.service.GetUserByLogin(r.Context(), registerRequest.Login)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
 		log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
@@ -74,7 +74,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err = h.service.RegisterUser(registerRequest.Login, registerRequest.Password)
+	user, err = h.service.RegisterUser(r.Context(), registerRequest.Login, registerRequest.Password)
 	if err != nil {
 		log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
@@ -108,7 +108,7 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.AuthUser(loginRequest.Login, loginRequest.Password)
+	user, err := h.service.AuthUser(r.Context(), loginRequest.Login, loginRequest.Password)
 	if err != nil {
 
 		if errors.Is(err, entity.ErrNotFound) {
@@ -164,7 +164,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 	orderNumber := string(body)
 
-	if _, err = h.service.CreateOrder(orderNumber, user.ID); err != nil {
+	if _, err = h.service.CreateOrder(r.Context(), orderNumber, user.ID); err != nil {
 
 		if errors.Is(err, entity.ErrOrderNumberConflict) {
 			JSONmsg(w, http.StatusConflict, "error", "номер заказа уже был загружен другим пользователем")
@@ -190,7 +190,7 @@ func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
-	orders, err := h.service.GetUserOrders(user.ID)
+	orders, err := h.service.GetUserOrders(r.Context(), user.ID)
 	if err != nil {
 		log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
@@ -204,7 +204,7 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
-	withdrawals, err := h.service.GetWithdrawals(user.ID)
+	withdrawals, err := h.service.GetWithdrawals(r.Context(), user.ID)
 	if err != nil {
 		log.Error("error get withdrawals", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
@@ -235,7 +235,7 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
+	err = h.service.Withdraw(r.Context(), user.ID, req.Order, req.Sum)
 	if err != nil {
 		log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
@@ -248,7 +248,7 @@ func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request)
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
-	withdrawals, err := h.service.GetWithdrawals(user.ID)
+	withdrawals, err := h.service.GetWithdrawals(r.Context(), user.ID)
 	if err != nil {
 		log.Errorf("error get withdrawals: %s", err)
 		return

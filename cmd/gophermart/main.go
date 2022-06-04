@@ -12,7 +12,7 @@ import (
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/handlers"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	_service "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
+	_storage "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
@@ -21,11 +21,11 @@ var log = logger.GetLoggerInstance()
 func main() {
 	config.InitConfig()
 
-	store, err := storage.NewPostgresStorage(config.DatabaseURI())
+	storage, err := _storage.NewPostgresStorage(config.DatabaseURI())
 	if err != nil {
 		log.Fatal(err)
 	}
-	service := _service.New(store)
+	service := _service.New(storage)
 
 	cookieStore := initCookieStore(config.CookieStoreKey())
 

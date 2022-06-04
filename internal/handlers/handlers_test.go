@@ -29,8 +29,8 @@ func Test_handlers_userRegister(t *testing.T) {
 		Balance:  2022,
 	}
 
-	m.EXPECT().GetUserByLogin(testUser.Login).Return(nil, nil)
-	m.EXPECT().RegisterUser(testUser.Login, testUser.Password).Return(&testUser, nil)
+	m.EXPECT().GetUserByLogin(gomock.Any(), testUser.Login).Return(nil, nil)
+	m.EXPECT().RegisterUser(gomock.Any(), testUser.Login, testUser.Password).Return(&testUser, nil)
 
 	h := handler{
 		service:  m,
@@ -63,7 +63,7 @@ func Test_handlers_userLogin(t *testing.T) {
 		Balance:  2022,
 	}
 
-	m.EXPECT().AuthUser(testUser.Login, testUser.Password).Return(&testUser, nil)
+	m.EXPECT().AuthUser(gomock.Any(), testUser.Login, testUser.Password).Return(&testUser, nil)
 
 	h := handler{
 		service:  m,

@@ -45,7 +45,7 @@ func (a *accrual) Run(ctx context.Context) {
 }
 
 func (a *accrual) processOrders() {
-	orders, err := a.service.GetNewOrders()
+	orders, err := a.service.GetNewOrders(context.Background())
 	if err != nil {
 		log.Errorf("Error get new orders: %s", err)
 		return
@@ -67,13 +67,13 @@ func (a *accrual) processOrders() {
 		order.Accrual = result.Accrual
 		order.Status = result.Status
 
-		if err := a.service.UserBalanceChange(order.UserID, +order.Accrual); err != nil {
+		if err := a.service.UserBalanceChange(context.Background(), order.UserID, +order.Accrual); err != nil {
 			log.Errorf("error update user balance: userID: %d, delta %f", order.UserID, order.Accrual)
 		}
 
 		log.Debugf("Change user balance: userID %d, delta %f", order.UserID, order.Accrual)
 
-		err = a.service.UpdateOrder(order)
+		err = a.service.UpdateOrder(context.Background(), order)
 		if err != nil {
 			log.Errorf("error update order: %s", err)
 			return

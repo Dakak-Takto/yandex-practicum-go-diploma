@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -18,10 +19,13 @@ func Test_service_RegisterUser(t *testing.T) {
 	defer ctrl.Finish()
 
 	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin("login").Return(nil, nil)
-	m.EXPECT().SaveUser(&entity.User{Login: "login", Password: utils.Hash("password")}).Return(&entity.User{Login: "login", Password: utils.Hash("password")}, nil)
+	m.EXPECT().GetUserByLogin(nil, "login").Return(nil, nil)
+	m.EXPECT().SaveUser(nil, &entity.User{
+		Login:    "login",
+		Password: utils.Hash("password"),
+	}).Return(&entity.User{Login: "login", Password: utils.Hash("password")}, nil)
 
-	_, err := New(m).RegisterUser("login", "password")
+	_, err := New(m).RegisterUser(nil, "login", "password")
 	require.NoError(t, err)
 }
 
@@ -30,9 +34,9 @@ func Test_service_RegisterUser_LoginExist(t *testing.T) {
 	defer ctrl.Finish()
 
 	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin("login").Return(&entity.User{}, nil)
+	m.EXPECT().GetUserByLogin(nil, "login").Return(&entity.User{}, nil)
 
-	_, err := New(m).RegisterUser("login", "password1")
+	_, err := New(m).RegisterUser(nil, "login", "password1")
 	if assert.Error(t, err) {
 		require.Equal(t, err, entity.ErrLoginAlreadyExists)
 	}
@@ -53,9 +57,9 @@ func Test_service_AuthUser(t *testing.T) {
 	}
 
 	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin(login).Return(&u, nil)
+	m.EXPECT().GetUserByLogin(nil, login).Return(&u, nil)
 
-	_, err := New(m).AuthUser(login, password)
+	_, err := New(m).AuthUser(nil, login, password)
 	require.NoError(t, err)
 }
 
@@ -74,9 +78,9 @@ func Test_service_AuthUser_WrongPassword(t *testing.T) {
 	}
 
 	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin(login).Return(&u, nil)
+	m.EXPECT().GetUserByLogin(nil, login).Return(&u, nil)
 
-	_, err := New(m).AuthUser(login, "wrong password")
+	_, err := New(m).AuthUser(nil, login, "wrong password")
 	if assert.Error(t, err) {
 		require.Equal(t, err, entity.ErrInvalidCredentials)
 	}
@@ -92,10 +96,10 @@ func Test_service_CreateOrder(t *testing.T) {
 		Number: "422466257468622",
 		UserID: 24,
 	}
+	m.EXPECT().GetOrderByNumber(nil, testOrder.Number).Return(nil, nil)
+	m.EXPECT().SaveUserOrder(nil, testOrder.Number, testOrder.UserID).Return(&testOrder, nil)
 
-	m.EXPECT().SaveUserOrder(testOrder.Number, testOrder.UserID).Return(&testOrder, nil)
-
-	_, err := New(m).CreateOrder(testOrder.Number, testOrder.UserID)
+	_, err := New(m).CreateOrder(nil, testOrder.Number, testOrder.UserID)
 	require.NoError(t, err)
 }
 
@@ -110,7 +114,7 @@ func Test_service_CreateOrder_WrongNumber(t *testing.T) {
 		UserID: 24,
 	}
 
-	_, err := New(m).CreateOrder(testOrder.Number, testOrder.UserID)
+	_, err := New(m).CreateOrder(nil, testOrder.Number, testOrder.UserID)
 	if assert.Error(t, err) {
 		require.Equal(t, err, entity.ErrOrderNumberIncorrect)
 	}
@@ -128,40 +132,11 @@ func Test_service_GetUserOrders(t *testing.T) {
 		{Number: "2352238521358", UserID: 24},
 	}
 
-	m.EXPECT().SelectOrdersByUserID(24).Return(testOrders, nil)
+	m.EXPECT().SelectOrdersByUserID(nil, 24).Return(testOrders, nil)
 
-	actualOrders, err := New(m).GetUserOrders(24)
+	actualOrders, err := New(m).GetUserOrders(nil, 24)
 	require.NoError(t, err)
 	require.Equal(t, testOrders, actualOrders)
-}
-
-func Test_service_Withdraw(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	m := mocks.NewMockStorage(ctrl)
-
-	testUser := &entity.User{
-		ID:      24,
-		Balance: 2022,
-	}
-
-	m.EXPECT().GetUserByID(testUser.ID).Return(testUser, nil)
-
-	testWithdraw := &entity.Withdraw{
-		UserID: testUser.ID,
-		Sum:    22,
-		Order:  "2352238521358",
-	}
-
-	wantBalance := testUser.Balance - testWithdraw.Sum
-
-	m.EXPECT().SaveWithdraw(testWithdraw).Return(nil)
-	m.EXPECT().UpdateUser(testUser).Return(nil)
-
-	err := New(m).Withdraw(testUser.ID, testWithdraw.Order, testWithdraw.Sum)
-	require.NoError(t, err)
-	require.Equal(t, wantBalance, testUser.Balance)
 }
 
 func Test_service_GetWithdrawals(t *testing.T) {
@@ -178,8 +153,8 @@ func Test_service_GetWithdrawals(t *testing.T) {
 		{Order: "2352238521358", UserID: userID, Sum: 33},
 	}
 
-	m.EXPECT().SelectWithdrawals(userID).Return(withdrawals, nil)
+	m.EXPECT().SelectWithdrawals(gomock.Any(), userID).Return(withdrawals, nil)
 
-	_, err := New(m).GetWithdrawals(userID)
+	_, err := New(m).GetWithdrawals(context.Background(), userID)
 	require.NoError(t, err)
 }

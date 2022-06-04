@@ -7,7 +7,6 @@ import (
 
 func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		session, err := h.sessions.Get(r, cookieSessionName)
 		if err != nil && !session.IsNew {
 			log.Error("error get session: ", err)
@@ -23,7 +22,7 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := h.service.GetUserByID(userID)
+		user, err := h.service.GetUserByID(r.Context(), userID)
 		if err != nil {
 			log.Errorf("пользователь %d не найден", userID)
 			JSONmsg(w, http.StatusUnauthorized, "error", "пользователь не авторизован")
