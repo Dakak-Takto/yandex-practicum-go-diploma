@@ -65,7 +65,21 @@ func (a *accrual) processOrders() {
 		}
 
 		order.Accrual = result.Accrual
-		order.Status = result.Status
+
+		switch result.Status {
+		case entity.OrderStatusNEW.String():
+			order.Status = entity.OrderStatusNEW
+		case entity.OrderStatusREGISTERED.String():
+			order.Status = entity.OrderStatusREGISTERED
+		case entity.OrderStatusINVALID.String():
+			order.Status = entity.OrderStatusPROCESSED
+		case entity.OrderStatusPROCESSING.String():
+			order.Status = entity.OrderStatusPROCESSING
+		case entity.OrderStatusPROCESSED.String():
+			order.Status = entity.OrderStatusPROCESSED
+		default:
+			order.Status = entity.OrderStatusUNKNOWN
+		}
 
 		if err := a.service.UserBalanceChange(context.Background(), order.UserID, +order.Accrual); err != nil {
 			log.Errorf("error update user balance: userID: %d, delta %f", order.UserID, order.Accrual)

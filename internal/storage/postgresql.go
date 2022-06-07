@@ -222,10 +222,10 @@ func (s *store) SelectNewOrders(ctx context.Context) ([]*entity.Order, error) {
 
 	var orders []*entity.Order
 
-	statuses := []string{
-		entity.OrderStatusNew,
-		entity.OrderStatusRegistered,
-		entity.OrderStatusProcessing,
+	statuses := []entity.OrderStatus{
+		entity.OrderStatusNEW,
+		entity.OrderStatusREGISTERED,
+		entity.OrderStatusPROCESSING,
 	}
 
 	err := s.db.SelectContext(ctx, &orders, `SELECT number, accrual, status, user_id, uploaded_at FROM orders WHERE status = ANY($1)`, statuses)
