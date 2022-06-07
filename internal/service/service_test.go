@@ -11,8 +11,8 @@ import (
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/mocks"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/mocks"
 )
 
 func Test_service_RegisterUser(t *testing.T) {
@@ -130,7 +130,9 @@ func Test_service_RegisterUser(t *testing.T) {
 			{Number: "2352238521358", UserID: 24},
 		}
 
-		m.EXPECT().SelectOrdersByUserID(ctx, 24).Return(testOrders, nil)
+		m.EXPECT().
+			SelectOrdersByUserID(ctx, 24).
+			Return(testOrders, nil)
 
 		actualOrders, err := New(m, log).GetUserOrders(ctx, 24)
 		require.NoError(t, err)
@@ -146,9 +148,13 @@ func Test_service_RegisterUser(t *testing.T) {
 			{Order: "2352238521358", UserID: userID, Sum: 33},
 		}
 
-		m.EXPECT().SelectWithdrawals(ctx, userID).Return(withdrawals, nil)
+		m.EXPECT().
+			SelectWithdrawals(ctx, userID).
+			Return(withdrawals, nil)
 
-		_, err := New(m, log).GetWithdrawals(ctx, userID)
+		_, err := New(m, log).
+			GetWithdrawals(ctx, userID)
+
 		require.NoError(t, err)
 	})
 

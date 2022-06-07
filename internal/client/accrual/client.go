@@ -15,6 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	defaultSleepSeconds int = 60
+)
+
 type Accrual interface {
 	Run(context.Context)
 }
@@ -109,6 +113,7 @@ func (a *accrual) getOrderInfo(order *entity.Order) (*orderAccrualResponseDTO, e
 		a.log.Errorf("Error get accrual info: %s", err)
 		return nil, err
 	}
+
 	defer func() {
 		if err := response.Body.Close(); err != nil {
 			a.log.Errorf("error close body: %s", err)
@@ -116,12 +121,11 @@ func (a *accrual) getOrderInfo(order *entity.Order) (*orderAccrualResponseDTO, e
 	}()
 
 	if response.StatusCode == http.StatusTooManyRequests {
-		sleepTime := 60
 
 		sleepTime, err := strconv.Atoi(response.Header.Get("Retry-After"))
 		if err != nil {
 			a.log.Errorf("error parse retry-after time: %s", err)
-			return nil, err
+			sleepTime = defaultSleepSeconds
 		}
 
 		a.log.Debugf("accrual client sleep: %d second", sleepTime)

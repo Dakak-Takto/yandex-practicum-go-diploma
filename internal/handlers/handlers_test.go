@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/mocks"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/mocks"
 )
 
 func Test_handlers_userRegister(t *testing.T) {
