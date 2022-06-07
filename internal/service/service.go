@@ -5,44 +5,40 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
-var (
-	_   Service = (*service)(nil)
-	log         = logger.GetLoggerInstance()
-)
-
 type service struct {
 	storage storage.Storage
+	log     *logrus.Logger
 }
 
-func New(storage storage.Storage) Service {
-	log.Debug("init service")
+func New(storage storage.Storage, logger *logrus.Logger) Service {
 	return &service{
 		storage: storage,
+		log:     logger,
 	}
 }
 
 func (s *service) RegisterUser(ctx context.Context, login string, password string) (*entity.User, error) {
 
 	if login == "" || password == "" {
-		log.Error("пустой логин или пароль")
+		s.log.Warn("пустой логин или пароль")
 		return nil, entity.ErrInvalidRequestFormat // если логин или пароль пустой
 	}
 
 	user, err := s.storage.GetUserByLogin(ctx, login)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
-		log.Error("ошибка получения пользователя по логину")
+		s.log.Warn("ошибка получения пользователя по логину")
 		return nil, entity.ErrInternalError // ошибка при запросе их хранилища
 	}
 	if user != nil {
-		log.Error("логин занят")
+		s.log.Warn("логин занят")
 		return nil, entity.ErrLoginAlreadyExists // логин занят
 	}
 
@@ -52,7 +48,7 @@ func (s *service) RegisterUser(ctx context.Context, login string, password strin
 	})
 
 	if err != nil {
-		log.Error("ошибка сохранения пользователя", err)
+		s.log.Warn("ошибка сохранения пользователя", err)
 		return nil, entity.ErrInternalError // ошибка при записи в хранилище
 	}
 
@@ -67,18 +63,18 @@ func (s *service) RegisterUser(ctx context.Context, login string, password strin
 func (s *service) AuthUser(ctx context.Context, login string, password string) (*entity.User, error) {
 
 	if login == "" || password == "" {
-		log.Error("логин или пароль пустой")
+		s.log.Warn("логин или пароль пустой")
 		return nil, entity.ErrInvalidRequestFormat // если логин или пароль пустой
 	}
 
 	user, err := s.storage.GetUserByLogin(ctx, login)
 	if err != nil {
-		log.Errorf("error get user: %s", err)
+		s.log.Warnf("error get user: %s", err)
 		return nil, err // ошибка при запросе из хранилища
 	}
 
 	if user.Password != utils.Hash(password) {
-		log.Error("invalid credentials")
+		s.log.Warn("invalid credentials")
 		return nil, entity.ErrInvalidCredentials // пароль не совпадает или пользователя не существует
 	}
 	return user, nil
@@ -95,7 +91,7 @@ func (s *service) CreateOrder(ctx context.Context, number string, userID int) (*
 
 	order, err := s.GetOrderByNumber(ctx, number)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
-		log.Error(err)
+		s.log.Warn(err)
 		return nil, entity.ErrInternalError
 	}
 
@@ -108,7 +104,7 @@ func (s *service) CreateOrder(ctx context.Context, number string, userID int) (*
 
 	order, err = s.storage.SaveUserOrder(ctx, number, userID)
 	if err != nil {
-		log.Errorf("error save order: %s", err)
+		s.log.Warnf("error save order: %s", err)
 		return nil, err
 	}
 	return order, nil
@@ -135,11 +131,11 @@ func (s *service) GetUserOrders(ctx context.Context, userID int) ([]*entity.Orde
 func (s *service) Withdraw(ctx context.Context, userID int, orderNumber string, sum float64) error {
 	user, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
-		log.Errorf("Error get User: %s", err)
+		s.log.Warnf("Error get User: %s", err)
 		return err
 	}
 
-	log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
+	s.log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
 
 	err = s.storage.SaveWithdraw(ctx, &entity.Withdraw{
 		UserID: user.ID,
@@ -147,7 +143,7 @@ func (s *service) Withdraw(ctx context.Context, userID int, orderNumber string, 
 		Order:  orderNumber,
 	})
 	if err != nil {
-		log.Errorf("error save withdraw: %s", err)
+		s.log.Warnf("error save withdraw: %s", err)
 	}
 
 	err = s.UserBalanceChange(ctx, user.ID, -sum)

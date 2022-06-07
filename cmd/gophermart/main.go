@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
+	"github.com/labstack/gommon/log"
 
 	_accrual "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/client/accrual"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/config"
@@ -16,24 +17,24 @@ import (
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
-var log = logger.GetLoggerInstance()
-
 func main() {
+	log := logger.New()
+
 	config.InitConfig()
 
 	storage, err := _storage.NewPostgresStorage(config.DatabaseURI())
 	if err != nil {
 		log.Fatal(err)
 	}
-	service := _service.New(storage)
+	service := _service.New(storage, log)
 
 	cookieStore := initCookieStore(config.CookieStoreKey())
 
-	handler := handlers.New(service, cookieStore)
+	handler := handlers.New(service, cookieStore, log)
 	router := chi.NewRouter()
 	handler.Register(router)
 
-	accrual := _accrual.New(service, config.AccrualSystemAddress())
+	accrual := _accrual.New(service, config.AccrualSystemAddress(), log)
 
 	go accrual.Run(context.Background())
 

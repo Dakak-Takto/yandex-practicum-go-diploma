@@ -10,178 +10,146 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/mocks"
 )
 
 func Test_service_RegisterUser(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	log := logger.New()
 
-	newUserID := 12312
-
-	ctx := context.Background()
-	m := mocks.NewMockStorage(ctrl)
-
-	m.EXPECT().GetUserByLogin(ctx, "login").
-		Return(nil, nil)
-
-	m.EXPECT().SaveUser(ctx, &entity.User{
-		Login:    "login",
-		Password: utils.Hash("password"),
-	}).Return(newUserID, nil)
-
-	m.EXPECT().GetUserByID(ctx, newUserID).
-		Return(&entity.User{
-			ID:       newUserID,
-			Login:    "login",
-			Password: utils.Hash("password"),
-		}, nil)
-
-	_, err := New(m).RegisterUser(ctx, "login", "password")
-	require.NoError(t, err)
-}
-
-func Test_service_RegisterUser_LoginExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-
-	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin(ctx, "login").Return(&entity.User{}, nil)
-
-	_, err := New(m).RegisterUser(ctx, "login", "password1")
-	if assert.Error(t, err) {
-		require.Equal(t, err, entity.ErrLoginAlreadyExists)
-	}
-}
-
-func Test_service_AuthUser(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	ctx := context.Background()
-
-	const (
-		login    string = "login"
-		password string = "password"
-	)
-
-	u := entity.User{
-		Login:    login,
-		Password: utils.Hash(password),
-	}
-
-	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin(ctx, login).Return(&u, nil)
-
-	_, err := New(m).AuthUser(ctx, login, password)
-	require.NoError(t, err)
-}
-
-func Test_service_AuthUser_WrongPassword(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	ctx := context.Background()
-
-	const (
-		login    string = "login"
-		password string = "password"
-	)
-
-	u := entity.User{
-		Login:    login,
-		Password: utils.Hash(password),
-	}
-
-	m := mocks.NewMockStorage(ctrl)
-	m.EXPECT().GetUserByLogin(ctx, login).Return(&u, nil)
-
-	_, err := New(m).AuthUser(ctx, login, "wrong password")
-	if assert.Error(t, err) {
-		require.Equal(t, err, entity.ErrInvalidCredentials)
-	}
-}
-
-func Test_service_CreateOrder(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	ctx := context.Background()
-
 	m := mocks.NewMockStorage(ctrl)
 
-	testOrder := entity.Order{
-		Number: "422466257468622",
-		UserID: 24,
-	}
-	m.EXPECT().GetOrderByNumber(ctx, testOrder.Number).Return(nil, nil)
-	m.EXPECT().SaveUserOrder(ctx, testOrder.Number, testOrder.UserID).Return(&testOrder, nil)
+	t.Run("normal register", func(t *testing.T) {
 
-	_, err := New(m).CreateOrder(ctx, testOrder.Number, testOrder.UserID)
-	require.NoError(t, err)
-}
+		newUserID := 12312
 
-func Test_service_CreateOrder_WrongNumber(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+		m.EXPECT().
+			GetUserByLogin(ctx, "login").
+			Return(nil, nil)
 
-	ctx := context.Background()
+		m.EXPECT().
+			SaveUser(ctx, &entity.User{
+				Login:    "login",
+				Password: utils.Hash("password"),
+			}).
+			Return(newUserID, nil)
 
-	m := mocks.NewMockStorage(ctrl)
+		m.EXPECT().
+			GetUserByID(ctx, newUserID).
+			Return(&entity.User{
+				ID:       newUserID,
+				Login:    "login",
+				Password: utils.Hash("password"),
+			}, nil)
 
-	testOrder := entity.Order{
-		Number: "wrong number",
-		UserID: 24,
-	}
+		_, err := New(m, log).RegisterUser(ctx, "login", "password")
+		require.NoError(t, err)
+	})
 
-	_, err := New(m).CreateOrder(ctx, testOrder.Number, testOrder.UserID)
-	if assert.Error(t, err) {
-		require.Equal(t, err, entity.ErrOrderNumberIncorrect)
-	}
-}
+	t.Run("login busy", func(t *testing.T) {
 
-func Test_service_GetUserOrders(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+		m.EXPECT().
+			GetUserByLogin(ctx, "login").
+			Return(&entity.User{}, nil)
 
-	ctx := context.Background()
+		_, err := New(m, log).RegisterUser(ctx, "login", "password1")
+		if assert.Error(t, err) {
+			require.Equal(t, err, entity.ErrLoginAlreadyExists)
+		}
+	})
 
-	m := mocks.NewMockStorage(ctrl)
+	t.Run("auth", func(t *testing.T) {
+		const (
+			login    string = "login"
+			password string = "password"
+		)
 
-	testOrders := []*entity.Order{
-		{Number: "6174570601580", UserID: 24},
-		{Number: "422466257468622", UserID: 24},
-		{Number: "2352238521358", UserID: 24},
-	}
+		u := entity.User{
+			Login:    login,
+			Password: utils.Hash(password),
+		}
 
-	m.EXPECT().SelectOrdersByUserID(ctx, 24).Return(testOrders, nil)
+		m.EXPECT().GetUserByLogin(ctx, login).Return(&u, nil)
 
-	actualOrders, err := New(m).GetUserOrders(ctx, 24)
-	require.NoError(t, err)
-	require.Equal(t, testOrders, actualOrders)
-}
+		_, err := New(m, log).AuthUser(ctx, login, password)
+		require.NoError(t, err)
+	})
 
-func Test_service_GetWithdrawals(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	t.Run("auth wrong credentials", func(t *testing.T) {
+		const (
+			login    string = "login"
+			password string = "password"
+		)
 
-	ctx := context.Background()
+		u := entity.User{
+			Login:    login,
+			Password: utils.Hash(password),
+		}
 
-	m := mocks.NewMockStorage(ctrl)
+		m.EXPECT().GetUserByLogin(ctx, login).Return(&u, nil)
 
-	userID := 24
+		_, err := New(m, log).AuthUser(ctx, login, "wrong password")
+		if assert.Error(t, err) {
+			require.Equal(t, err, entity.ErrInvalidCredentials)
+		}
+	})
 
-	withdrawals := []*entity.Withdraw{
-		{Order: "6174570601580", UserID: userID, Sum: 11},
-		{Order: "422466257468622", UserID: userID, Sum: 22},
-		{Order: "2352238521358", UserID: userID, Sum: 33},
-	}
+	t.Run("create order", func(t *testing.T) {
+		testOrder := entity.Order{
+			Number: "422466257468622",
+			UserID: 24,
+		}
+		m.EXPECT().GetOrderByNumber(ctx, testOrder.Number).Return(nil, nil)
+		m.EXPECT().SaveUserOrder(ctx, testOrder.Number, testOrder.UserID).Return(&testOrder, nil)
 
-	m.EXPECT().SelectWithdrawals(ctx, userID).Return(withdrawals, nil)
+		_, err := New(m, log).CreateOrder(ctx, testOrder.Number, testOrder.UserID)
+		require.NoError(t, err)
+	})
 
-	_, err := New(m).GetWithdrawals(ctx, userID)
-	require.NoError(t, err)
+	t.Run("create order wrong number", func(t *testing.T) {
+		testOrder := entity.Order{
+			Number: "wrong number",
+			UserID: 24,
+		}
+
+		_, err := New(m, log).CreateOrder(ctx, testOrder.Number, testOrder.UserID)
+		if assert.Error(t, err) {
+			require.Equal(t, err, entity.ErrOrderNumberIncorrect)
+		}
+	})
+
+	t.Run("get user orders", func(t *testing.T) {
+		testOrders := []*entity.Order{
+			{Number: "6174570601580", UserID: 24},
+			{Number: "422466257468622", UserID: 24},
+			{Number: "2352238521358", UserID: 24},
+		}
+
+		m.EXPECT().SelectOrdersByUserID(ctx, 24).Return(testOrders, nil)
+
+		actualOrders, err := New(m, log).GetUserOrders(ctx, 24)
+		require.NoError(t, err)
+		require.Equal(t, testOrders, actualOrders)
+	})
+
+	t.Run("get user withdrawals", func(t *testing.T) {
+		userID := 24
+
+		withdrawals := []*entity.Withdraw{
+			{Order: "6174570601580", UserID: userID, Sum: 11},
+			{Order: "422466257468622", UserID: userID, Sum: 22},
+			{Order: "2352238521358", UserID: userID, Sum: 33},
+		}
+
+		m.EXPECT().SelectWithdrawals(ctx, userID).Return(withdrawals, nil)
+
+		_, err := New(m, log).GetWithdrawals(ctx, userID)
+		require.NoError(t, err)
+	})
+
 }

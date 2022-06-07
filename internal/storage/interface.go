@@ -6,6 +6,8 @@ import (
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 )
 
+//go:generate mockgen -destination=../mocks/mock_storage.go -package=mocks github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage Storage
+
 type Storage interface {
 	SaveUser(context.Context, *entity.User) (id int, err error)
 	GetUserByLogin(ctx context.Context, login string) (*entity.User, error)

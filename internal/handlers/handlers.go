@@ -7,24 +7,24 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
 )
 
 type handler struct {
 	service  service.Service
 	sessions *sessions.CookieStore
+	log      *logrus.Logger
 }
 
-var log = logger.GetLoggerInstance()
-
-func New(service service.Service, cookieStore *sessions.CookieStore) Handler {
+func New(service service.Service, cookieStore *sessions.CookieStore, logger *logrus.Logger) Handler {
 
 	return &handler{
 		service:  service,
 		sessions: cookieStore,
+		log:      logger,
 	}
 }
 
@@ -63,27 +63,27 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.GetUserByLogin(r.Context(), registerRequest.Login)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	if user != nil {
-		log.Errorf("login %s already exists", user.Login)
+		h.log.Errorf("login %s already exists", user.Login)
 		JSONmsg(w, http.StatusConflict, "error", "логин уже занят")
 		return
 	}
 
 	user, err = h.service.RegisterUser(r.Context(), registerRequest.Login, registerRequest.Password)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -91,7 +91,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	session.Values[cookieSessionUserIDKey] = user.ID
 
 	if err = session.Save(r, w); err != nil {
-		log.Errorf("error save session: %s", err)
+		h.log.Errorf("error save session: %s", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -127,14 +127,14 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil && !session.IsNew {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
 
 	if err = session.Save(r, w); err != nil {
-		log.Errorf("error save session: %s", err)
+		h.log.Errorf("error save session: %s", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -157,7 +157,7 @@ func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -192,7 +192,7 @@ func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
 	orders, err := h.service.GetUserOrders(r.Context(), user.ID)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -206,7 +206,7 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 
 	withdrawals, err := h.service.GetWithdrawals(r.Context(), user.ID)
 	if err != nil {
-		log.Error("error get withdrawals", err)
+		h.log.Error("error get withdrawals", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -237,7 +237,7 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.Withdraw(r.Context(), user.ID, req.Order, req.Sum)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -250,7 +250,7 @@ func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request)
 
 	withdrawals, err := h.service.GetWithdrawals(r.Context(), user.ID)
 	if err != nil {
-		log.Errorf("error get withdrawals: %s", err)
+		h.log.Errorf("error get withdrawals: %s", err)
 		return
 	}
 

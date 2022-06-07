@@ -7,14 +7,9 @@ import (
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
+	"github.com/labstack/gommon/log"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
-)
-
-var (
-	_   Storage = (*store)(nil)
-	log         = logger.GetLoggerInstance()
 )
 
 type store struct {
@@ -43,8 +38,6 @@ func NewPostgresStorage(dsn string) (Storage, error) {
 		return nil, err
 	}
 
-	log.Debug("connect database OK")
-
 	return &store, nil
 }
 
@@ -53,7 +46,6 @@ func (s *store) SaveUser(ctx context.Context, user *entity.User) (userID int, er
 	err = s.db.GetContext(ctx, &userID, `INSERT INTO users ( login, password ) VALUES ( $1, $2 ) RETURNING id`, user.Login, user.Password)
 
 	if err != nil {
-		log.Error("save user error:", err)
 		return 0, err
 	}
 
@@ -62,11 +54,8 @@ func (s *store) SaveUser(ctx context.Context, user *entity.User) (userID int, er
 
 func (s *store) SaveUserOrder(ctx context.Context, orderNumber string, userID int) (*entity.Order, error) {
 
-	log.Debugf("insert order %s, user_id %d", orderNumber, userID)
-
 	_, err := s.db.ExecContext(ctx, `INSERT INTO orders ( number, user_id ) VALUES ($1, $2)`, orderNumber, userID)
 	if err != nil {
-		log.Error("save order error:", err)
 		return nil, err
 	}
 
@@ -75,11 +64,8 @@ func (s *store) SaveUserOrder(ctx context.Context, orderNumber string, userID in
 
 func (s *store) SaveWithdraw(ctx context.Context, withdraw *entity.Withdraw) error {
 
-	log.Debugf("insert withdraw: %+v", withdraw)
-
 	_, err := s.db.NamedExecContext(ctx, `INSERT INTO withdrawals (order_number, sum, user_id) VALUES (:order_number, :sum, :user_id)`, withdraw)
 	if err != nil {
-		log.Error("save withdraw error: ", err)
 		return err
 	}
 
@@ -95,7 +81,6 @@ func (s *store) GetOrderByNumber(ctx context.Context, number string) (*entity.Or
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, entity.ErrNotFound
 		}
-		log.Error("get order by number error: ", err)
 		return nil, err
 	}
 
@@ -111,7 +96,6 @@ func (s *store) GetUserByLogin(ctx context.Context, login string) (*entity.User,
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, entity.ErrNotFound
 		}
-		log.Error("get user by login error: ", err)
 		return nil, err
 	}
 
@@ -124,7 +108,6 @@ func (s *store) SelectOrdersByUserID(ctx context.Context, userID int) ([]*entity
 
 	err := s.db.SelectContext(ctx, &orders, `SELECT number, accrual, status, user_id, uploaded_at FROM orders WHERE user_id = $1`, userID)
 	if err != nil {
-		log.Error("select order by user_id error: ", err)
 		return nil, err
 	}
 
@@ -137,7 +120,6 @@ func (s *store) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
 
 	err := s.db.GetContext(ctx, &user, `SELECT id, login, password, balance FROM users WHERE users.id = $1`, id)
 	if err != nil {
-		log.Error("get user by id error: ", err)
 		return nil, err
 	}
 
@@ -154,7 +136,6 @@ func (s *store) UpdateOrder(ctx context.Context, order *entity.Order) error {
 
 	updateOrder, err := s.db.PrepareNamedContext(ctx, `UPDATE orders SET accrual=:accrual, status=:status, user_id=:user_id WHERE number=:number`)
 	if err != nil {
-		log.Error("Prepare error:", err)
 		return err
 	}
 
@@ -230,7 +211,6 @@ func (s *store) SelectNewOrders(ctx context.Context) ([]*entity.Order, error) {
 
 	err := s.db.SelectContext(ctx, &orders, `SELECT number, accrual, status, user_id, uploaded_at FROM orders WHERE status = ANY($1)`, statuses)
 	if err != nil {
-		log.Error("select new orders error: ", err)
 		return nil, err
 	}
 	return orders, nil
@@ -241,7 +221,6 @@ func (s *store) SelectWithdrawals(ctx context.Context, userID int) ([]*entity.Wi
 
 	err := s.db.SelectContext(ctx, &withdrawals, `SELECT order_number, sum, user_id, processed_at FROM withdrawals WHERE user_id = $1`, userID)
 	if err != nil {
-		log.Error("select withdrawals error: ", err)
 		return nil, err
 	}
 	return withdrawals, nil

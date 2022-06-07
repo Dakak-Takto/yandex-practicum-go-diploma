@@ -6,6 +6,7 @@ import (
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
 )
 
+//go:generate mockgen -destination=../mocks/mock_service.go -package=mocks github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service Service
 type Service interface {
 	RegisterUser(ctx context.Context, login string, password string) (user *entity.User, err error)
 	AuthUser(ctx context.Context, login string, password string) (user *entity.User, err error)
