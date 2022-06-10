@@ -145,14 +145,6 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 // POST /api/user/orders. Загрузка пользователем номера заказа для расчёта
 func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
-	// 200 — номер заказа уже был загружен этим пользователем;
-	// 202 — новый номер заказа принят в обработку;
-	// 400 — неверный формат запроса;
-	// 401 — пользователь не аутентифицирован;
-	// 409 — номер заказа уже был загружен другим пользователем;
-	// 422 — неверный формат номера заказа;
-	// 500 — внутренняя ошибка сервера.
-
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -237,6 +229,14 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.Withdraw(r.Context(), user.ID, req.Order, req.Sum)
 	if err != nil {
+		if errors.Is(err, entity.ErrInsufficientFunds) {
+			JSONmsg(w, http.StatusPaymentRequired, "error", "на счету недостаточно средств")
+			return
+		}
+		if errors.Is(err, entity.ErrOrderNumberIncorrect) {
+			JSONmsg(w, http.StatusUnprocessableEntity, "error", "неверный номер заказа")
+			return
+		}
 		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return

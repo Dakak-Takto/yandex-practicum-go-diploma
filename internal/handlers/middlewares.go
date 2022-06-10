@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 )
 
@@ -37,6 +39,16 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 func (h *handler) httpLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			h.log.Error(err)
+			next.ServeHTTP(w, r)
+		}
+		r.Body.Close()
+
+		reader := io.NopCloser(bytes.NewBuffer(body))
+		r.Body = reader
+
 		recorder := &httpRecorder{
 			ResponseWriter: w,
 			Status:         http.StatusOK,
@@ -48,7 +60,7 @@ func (h *handler) httpLog(next http.Handler) http.Handler {
 			h.log.Info(e)
 		}
 
-		h.log.Debugf("[%d] %s %s. ", recorder.Status, r.Method, r.RequestURI)
+		h.log.Debugf("[%d] %s %s %s", recorder.Status, r.Method, r.RequestURI, body)
 		h.log.Debugf("response: %s", recorder.response)
 	})
 }

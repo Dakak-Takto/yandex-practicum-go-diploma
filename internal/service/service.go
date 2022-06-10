@@ -129,10 +129,19 @@ func (s *service) GetUserOrders(ctx context.Context, userID int) ([]*entity.Orde
 }
 
 func (s *service) Withdraw(ctx context.Context, userID int, orderNumber string, sum float64) error {
+
+	if o, err := strconv.Atoi(orderNumber); err != nil && !luhn.Valid(o) {
+		return entity.ErrOrderNumberIncorrect
+	}
+
 	user, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		s.log.Warnf("Error get User: %s", err)
 		return err
+	}
+
+	if user.Balance < sum {
+		return entity.ErrInsufficientFunds
 	}
 
 	s.log.Debugf("user balance %f. withdraw %f", user.Balance, sum)
