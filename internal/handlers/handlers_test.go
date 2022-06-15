@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,13 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/mocks"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/mocks"
 )
 
 func Test_handlers_userRegister(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	ctx := context.Background()
 
 	m := mocks.NewMockService(ctrl)
 
@@ -29,8 +32,8 @@ func Test_handlers_userRegister(t *testing.T) {
 		Balance:  2022,
 	}
 
-	m.EXPECT().GetUserByLogin(testUser.Login).Return(nil, nil)
-	m.EXPECT().RegisterUser(testUser.Login, testUser.Password).Return(&testUser, nil)
+	m.EXPECT().GetUserByLogin(ctx, testUser.Login).Return(nil, nil)
+	m.EXPECT().RegisterUser(ctx, testUser.Login, testUser.Password).Return(&testUser, nil)
 
 	h := handler{
 		service:  m,
@@ -54,6 +57,8 @@ func Test_handlers_userLogin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	m := mocks.NewMockService(ctrl)
 
 	testUser := entity.User{
@@ -63,7 +68,7 @@ func Test_handlers_userLogin(t *testing.T) {
 		Balance:  2022,
 	}
 
-	m.EXPECT().AuthUser(testUser.Login, testUser.Password).Return(&testUser, nil)
+	m.EXPECT().AuthUser(ctx, testUser.Login, testUser.Password).Return(&testUser, nil)
 
 	h := handler{
 		service:  m,

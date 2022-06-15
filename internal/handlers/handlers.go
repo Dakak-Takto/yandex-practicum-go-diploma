@@ -7,24 +7,24 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
 )
 
 type handler struct {
 	service  service.Service
 	sessions *sessions.CookieStore
+	log      *logrus.Logger
 }
 
-var log = logger.GetLoggerInstance()
-
-func New(service service.Service, cookieStore *sessions.CookieStore) Handler {
+func New(service service.Service, cookieStore *sessions.CookieStore, logger *logrus.Logger) Handler {
 
 	return &handler{
 		service:  service,
 		sessions: cookieStore,
+		log:      logger,
 	}
 }
 
@@ -61,29 +61,29 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.GetUserByLogin(registerRequest.Login)
+	user, err := h.service.GetUserByLogin(r.Context(), registerRequest.Login)
 	if err != nil && !errors.Is(err, entity.ErrNotFound) {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	if user != nil {
-		log.Errorf("login %s already exists", user.Login)
+		h.log.Errorf("login %s already exists", user.Login)
 		JSONmsg(w, http.StatusConflict, "error", "логин уже занят")
 		return
 	}
 
-	user, err = h.service.RegisterUser(registerRequest.Login, registerRequest.Password)
+	user, err = h.service.RegisterUser(r.Context(), registerRequest.Login, registerRequest.Password)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -91,7 +91,7 @@ func (h *handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	session.Values[cookieSessionUserIDKey] = user.ID
 
 	if err = session.Save(r, w); err != nil {
-		log.Errorf("error save session: %s", err)
+		h.log.Errorf("error save session: %s", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -108,7 +108,7 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.AuthUser(loginRequest.Login, loginRequest.Password)
+	user, err := h.service.AuthUser(r.Context(), loginRequest.Login, loginRequest.Password)
 	if err != nil {
 
 		if errors.Is(err, entity.ErrNotFound) {
@@ -127,14 +127,14 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.sessions.Get(r, cookieSessionName)
 	if err != nil && !session.IsNew {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 	session.Values[cookieSessionUserIDKey] = user.ID
 
 	if err = session.Save(r, w); err != nil {
-		log.Errorf("error save session: %s", err)
+		h.log.Errorf("error save session: %s", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -145,26 +145,18 @@ func (h *handler) userLogin(w http.ResponseWriter, r *http.Request) {
 // POST /api/user/orders. Загрузка пользователем номера заказа для расчёта
 func (h *handler) orderAdd(w http.ResponseWriter, r *http.Request) {
 
-	// 200 — номер заказа уже был загружен этим пользователем;
-	// 202 — новый номер заказа принят в обработку;
-	// 400 — неверный формат запроса;
-	// 401 — пользователь не аутентифицирован;
-	// 409 — номер заказа уже был загружен другим пользователем;
-	// 422 — неверный формат номера заказа;
-	// 500 — внутренняя ошибка сервера.
-
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
 
 	orderNumber := string(body)
 
-	if _, err = h.service.CreateOrder(orderNumber, user.ID); err != nil {
+	if _, err = h.service.CreateOrder(r.Context(), orderNumber, user.ID); err != nil {
 
 		if errors.Is(err, entity.ErrOrderNumberConflict) {
 			JSONmsg(w, http.StatusConflict, "error", "номер заказа уже был загружен другим пользователем")
@@ -190,9 +182,9 @@ func (h *handler) userOrders(w http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
-	orders, err := h.service.GetUserOrders(user.ID)
+	orders, err := h.service.GetUserOrders(r.Context(), user.ID)
 	if err != nil {
-		log.Error(err)
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -204,9 +196,9 @@ func (h *handler) userBalance(w http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
-	withdrawals, err := h.service.GetWithdrawals(user.ID)
+	withdrawals, err := h.service.GetWithdrawals(r.Context(), user.ID)
 	if err != nil {
-		log.Error("error get withdrawals", err)
+		h.log.Error("error get withdrawals", err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -235,9 +227,17 @@ func (h *handler) userBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Withdraw(user.ID, req.Order, req.Sum)
+	err = h.service.Withdraw(r.Context(), user.ID, req.Order, req.Sum)
 	if err != nil {
-		log.Error(err)
+		if errors.Is(err, entity.ErrInsufficientFunds) {
+			JSONmsg(w, http.StatusPaymentRequired, "error", "на счету недостаточно средств")
+			return
+		}
+		if errors.Is(err, entity.ErrOrderNumberIncorrect) {
+			JSONmsg(w, http.StatusUnprocessableEntity, "error", "неверный номер заказа")
+			return
+		}
+		h.log.Error(err)
 		JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 		return
 	}
@@ -248,9 +248,9 @@ func (h *handler) userBalanceWithdrawals(w http.ResponseWriter, r *http.Request)
 
 	user := r.Context().Value(userCtxKey("user")).(*entity.User)
 
-	withdrawals, err := h.service.GetWithdrawals(user.ID)
+	withdrawals, err := h.service.GetWithdrawals(r.Context(), user.ID)
 	if err != nil {
-		log.Errorf("error get withdrawals: %s", err)
+		h.log.Errorf("error get withdrawals: %s", err)
 		return
 	}
 

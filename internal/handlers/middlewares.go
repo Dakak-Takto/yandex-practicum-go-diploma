@@ -1,16 +1,17 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 )
 
 func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		session, err := h.sessions.Get(r, cookieSessionName)
 		if err != nil && !session.IsNew {
-			log.Error("error get session: ", err)
+			h.log.Warn("error get session: ", err)
 			JSONmsg(w, http.StatusInternalServerError, "error", "внутренняя ошибка сервера")
 			return
 		}
@@ -18,14 +19,14 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 		userID, exist := session.Values[cookieSessionUserIDKey].(int)
 
 		if !exist {
-			log.Error("пользователь не авторизован")
+			h.log.Warn("пользователь не авторизован")
 			JSONmsg(w, http.StatusUnauthorized, "error", "пользователь не авторизован")
 			return
 		}
 
-		user, err := h.service.GetUserByID(userID)
+		user, err := h.service.GetUserByID(r.Context(), userID)
 		if err != nil {
-			log.Errorf("пользователь %d не найден", userID)
+			h.log.Warnf("пользователь %d не найден", userID)
 			JSONmsg(w, http.StatusUnauthorized, "error", "пользователь не авторизован")
 			return
 		}
@@ -38,6 +39,16 @@ func (h *handler) CheckUserSession(next http.Handler) http.Handler {
 func (h *handler) httpLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			h.log.Error(err)
+			next.ServeHTTP(w, r)
+		}
+		r.Body.Close()
+
+		reader := io.NopCloser(bytes.NewBuffer(body))
+		r.Body = reader
+
 		recorder := &httpRecorder{
 			ResponseWriter: w,
 			Status:         http.StatusOK,
@@ -46,11 +57,11 @@ func (h *handler) httpLog(next http.Handler) http.Handler {
 
 		e := r.Context().Value("error")
 		if e != nil {
-			log.Info(e)
+			h.log.Info(e)
 		}
 
-		log.Debugf("[%d] %s %s. ", recorder.Status, r.Method, r.RequestURI)
-		log.Debugf("response: %s", recorder.response)
+		h.log.Debugf("[%d] %s %s %s", recorder.Status, r.Method, r.RequestURI, body)
+		h.log.Debugf("response: %s", recorder.response)
 	})
 }
 

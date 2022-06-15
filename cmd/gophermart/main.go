@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
@@ -12,28 +14,28 @@ import (
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/handlers"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/logger"
 	_service "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
+	_storage "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/storage"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/utils"
 )
 
-var log = logger.GetLoggerInstance()
-
 func main() {
+	log := logger.New()
+
 	config.InitConfig()
 
-	store, err := storage.NewPostgresStorage(config.DatabaseURI())
+	storage, err := _storage.NewPostgresStorage(config.DatabaseURI())
 	if err != nil {
 		log.Fatal(err)
 	}
-	service := _service.New(store)
+	service := _service.New(storage, log)
 
 	cookieStore := initCookieStore(config.CookieStoreKey())
 
-	handler := handlers.New(service, cookieStore)
+	handler := handlers.New(service, cookieStore, log)
 	router := chi.NewRouter()
 	handler.Register(router)
 
-	accrual := _accrual.New(service, config.AccrualSystemAddress())
+	accrual := _accrual.New(service, config.AccrualSystemAddress(), log)
 
 	go accrual.Run(context.Background())
 
@@ -44,10 +46,15 @@ func main() {
 func initCookieStore(key string) *sessions.CookieStore {
 
 	var keyPairs []byte
+	var err error
 
 	if len(key) == 0 {
-		keyPairs = utils.Random(64)
-		log.Infof("new cookie secret key: %x", keyPairs)
+		keyPairs, err = utils.Random(64)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Printf("new cookie secret key: %x", keyPairs)
 	} else {
 		keyPairs = []byte(key)
 	}

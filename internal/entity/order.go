@@ -1,32 +1,43 @@
 package entity
 
 import (
-	"fmt"
+	"encoding/json"
 	"time"
 )
 
 type Order struct {
-	Number     string    `db:"number"      json:"number"`
-	Accrual    float64   `db:"accrual"     json:"accrual"`
-	Status     string    `db:"status"      json:"status"`
-	UserID     int       `db:"user_id"     json:"-"`
-	UploadedAt orderTime `db:"uploaded_at" json:"uploaded_at"`
+	Number     string      `db:"number" json:"number"`
+	Accrual    float64     `db:"accrual" json:"accrual"`
+	Status     OrderStatus `db:"status" json:"status"`
+	UserID     int         `db:"user_id" json:"-"`
+	UploadedAt time.Time   `db:"uploaded_at" json:"uploaded_at"`
 }
 
+//go:generate stringer -type=OrderStatus -trimprefix OrderStatus
+type OrderStatus uint
+
 const (
-	OrderStatusNew        string = "NEW"
-	OrderStatusRegistered string = "REGISTERED"
-	OrderStatusInvalid    string = "INVALID"
-	OrderStatusProcessing string = "PROCESSING"
-	OrderStatusProcessed  string = "PROCESSED"
+	OrderStatusUNKNOWN OrderStatus = iota
+	OrderStatusNEW
+	OrderStatusREGISTERED
+	OrderStatusINVALID
+	OrderStatusPROCESSING
+	OrderStatusPROCESSED
 )
 
-type orderTime time.Time
+func (o Order) MarshalJSON() ([]byte, error) {
 
-func (uploadedAt *orderTime) MarshalJSON() ([]byte, error) {
+	type OrderAlias Order
 
-	t := time.Time(*uploadedAt).Format(time.RFC3339)
-	result := fmt.Sprintf("\"%s\"", t)
+	aliasValue := struct {
+		OrderAlias
+		OrderStatus string `json:"status"`
+		UploadedAt  string `json:"uploaded_at"`
+	}{
+		OrderAlias:  OrderAlias(o),
+		UploadedAt:  o.UploadedAt.Format(time.RFC3339),
+		OrderStatus: o.Status.String(),
+	}
 
-	return []byte(result), nil
+	return json.Marshal(aliasValue)
 }

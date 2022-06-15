@@ -1,23 +1,28 @@
 package entity
 
 import (
-	"fmt"
+	"encoding/json"
 	"time"
 )
 
 type Withdraw struct {
-	Order       string       `db:"order_number" json:"order"`
-	Sum         float64      `db:"sum" json:"sum"`
-	UserID      int          `db:"user_id" json:"-"`
-	ProcessedAt withdrawTime `db:"processed_at" json:"processed_at"`
+	Order       string    `db:"order_number" json:"order"`
+	Sum         float64   `db:"sum" json:"sum"`
+	UserID      int       `db:"user_id" json:"-"`
+	ProcessedAt time.Time `db:"processed_at" json:"processed_at"`
 }
 
-type withdrawTime time.Time
+func (w Withdraw) MarshalJSON() ([]byte, error) {
 
-func (uploadedAt *withdrawTime) MarshalJSON() ([]byte, error) {
+	type WithdrawAlias Withdraw
 
-	t := time.Time(*uploadedAt).Format(time.RFC3339)
-	result := fmt.Sprintf("\"%s\"", t)
+	aliasValue := struct {
+		WithdrawAlias
+		ProcessedAt string `json:"processed_at"`
+	}{
+		WithdrawAlias: WithdrawAlias(w),
+		ProcessedAt:   w.ProcessedAt.Format(time.RFC3339),
+	}
 
-	return []byte(result), nil
+	return json.Marshal(aliasValue)
 }

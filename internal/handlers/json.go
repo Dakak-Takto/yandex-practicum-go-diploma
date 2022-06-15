@@ -10,7 +10,9 @@ import (
 func JSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		_ = err
+	}
 }
 
 // write json message ({key:value}) with content-type header

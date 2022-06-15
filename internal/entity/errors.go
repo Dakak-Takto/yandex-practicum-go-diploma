@@ -11,4 +11,5 @@ var (
 	ErrOrderNumberIncorrect    = errors.New("неверный номер заказа")
 	ErrOrderNumberConflict     = errors.New("заказ уже был загружен другим пользователем")
 	ErrOrderNumberAlreadyExist = errors.New("заказ уже был загружен")
+	ErrInsufficientFunds       = errors.New("недостаточно средств")
 )
