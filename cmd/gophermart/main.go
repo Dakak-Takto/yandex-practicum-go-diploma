@@ -47,7 +47,10 @@ func initCookieStore(key string) *sessions.CookieStore {
 	var keyPairs []byte
 
 	if len(key) == 0 {
-		keyPairs = utils.Random(64)
+		keyPairs, err := utils.Random(64)
+		if err != nil {
+			log.Fatal(err)
+		}
 		log.Infof("new cookie secret key: %x", keyPairs)
 	} else {
 		keyPairs = []byte(key)
