@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
-	_service "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
 	"github.com/labstack/gommon/log"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/entity"
+	_service "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/service"
 )
 
 const (

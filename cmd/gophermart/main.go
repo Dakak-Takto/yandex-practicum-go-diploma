@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
-	"github.com/labstack/gommon/log"
 
 	_accrual "github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/client/accrual"
 	"github.com/Dakak-Takto/yandex-practicum-go-diploma/internal/config"
@@ -45,13 +46,15 @@ func main() {
 func initCookieStore(key string) *sessions.CookieStore {
 
 	var keyPairs []byte
+	var err error
 
 	if len(key) == 0 {
-		keyPairs, err := utils.Random(64)
+		keyPairs, err = utils.Random(64)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
-		log.Infof("new cookie secret key: %x", keyPairs)
+		fmt.Printf("new cookie secret key: %x", keyPairs)
 	} else {
 		keyPairs = []byte(key)
 	}
